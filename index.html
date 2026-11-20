@@ -106,6 +106,27 @@ section{padding:44px 0 4px}
 .toy .chips span{font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:3px 12px;color:#fff}
 .toy:hover h3{text-decoration:underline;text-underline-offset:5px}
 
+/* play grid: toy + diagnostics side by side */
+.play-grid{display:grid;gap:14px}
+@media(min-width:680px){.play-grid{grid-template-columns:1fr 1fr 1fr}.play-grid .toy h3{font-size:24px}}
+.diag{display:block;text-decoration:none;background:var(--surface);border:1.5px solid var(--line2);padding:30px 24px 26px;position:relative}
+.diag .plat{font-size:13px;color:var(--ink2);display:flex;justify-content:space-between;align-items:baseline}
+.diag .plat .arrow{font-size:22px;font-weight:700;color:var(--accent)}
+.diag h3{margin:8px 0 6px;font-size:clamp(22px,5vw,26px);font-weight:900;line-height:1.35;color:var(--ink)}
+.diag p{margin:0;font-size:14.5px;line-height:1.75;color:var(--ink2)}
+.diag .chips{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+.diag .chips span{font-size:12.5px;font-weight:700;border:1px solid var(--line2);border-radius:999px;padding:3px 12px;color:var(--accent)}
+.diag:hover{border-color:var(--accent)}
+.diag:hover h3{color:var(--accent);text-decoration:underline;text-underline-offset:5px}
+
+/* news / announcement */
+.news{margin-top:36px;border-top:1px solid var(--line)}
+.news .nrow{display:flex;gap:16px;align-items:baseline;padding:11px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.news .nrow time{flex:0 0 auto;font-weight:900;color:var(--accent);font-size:13px;white-space:nowrap}
+.news .nrow p{margin:0}
+.news .nrow a{color:var(--accent);font-weight:700;text-decoration:none}
+@media(max-width:560px){.news .nrow{flex-wrap:wrap;gap:2px 12px}}
+
 /* panels */
 .panel{background:var(--surface2);padding:24px 22px;margin-top:2px}
 .panel h3{margin:0 0 6px;font-size:19px;font-weight:900}
@@ -155,18 +176,38 @@ footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);display
     <div class="hero-text">
       <h1>しょっつる<span class="en">SHOTTOOL</span></h1>
       <p class="lede">イラストを描き、日記を書き、小さなツールを作る人。</p>
-      <p class="stats"><b>681</b> X フォロワー<span class="sep">/</span>note の日記 <b>153 + 129</b> 件<span class="sep">/</span>公開中のおもちゃ <b>1</b> 本</p>
+      <p class="stats"><b>681</b> X フォロワー<span class="sep">/</span>note の日記 <b>153 + 129</b> 件<span class="sep">/</span>遊べるもの・診断 <b>3</b> 本</p>
     </div>
   </header>
 
+  <div class="news" aria-label="お知らせ">
+    <div class="nrow"><time datetime="2026-11-21">2026.11.21</time><p>診断を2つ公開しました。<a href="#play">遊べるもの</a>からどうぞ。</p></div>
+    <div class="nrow"><time datetime="2026-11-21">2026.11.21</time><p>進行中のプロジェクトを<a href="#projects">すべて公開</a>しました。</p></div>
+    <div class="nrow"><time datetime="2026-11-20">2026.11.20</time><p>同人誌の入稿サポート、ココナラで受付中です。</p></div>
+  </div>
+
   <section aria-labelledby="play">
     <div class="sec-head"><span class="en-sub">PLAY</span><h2 id="play">遊べるもの</h2></div>
-    <a class="toy" href="salmon.html" target="_blank" rel="noopener">
-      <div class="plat"><span>公開中のおもちゃ</span><span class="arrow">↗</span></div>
-      <h3>サケ切りドットおもちゃ</h3>
-      <p>ドットのサケをなぞって切る。</p>
-      <div class="chips"><span>スワイプで切る</span><span>三枚おろし</span><span>輪切り</span><span>回して泳がせる</span></div>
-    </a>
+    <div class="play-grid">
+      <a class="toy" href="salmon.html" target="_blank" rel="noopener">
+        <div class="plat"><span>おもちゃ</span><span class="arrow">↗</span></div>
+        <h3>サケ切りドットおもちゃ</h3>
+        <p>ドットのサケをなぞって切る。</p>
+        <div class="chips"><span>スワイプで切る</span><span>三枚おろし</span><span>輪切り</span></div>
+      </a>
+      <a class="diag" href="https://muse.ai/s/ibentozhen-duan-16taipu-bd6yxsxdg69v7/A2k6ja5L0m7Lxh7pouCNE4GUyjDZPcfb85ZYJ-EcPSg" target="_blank" rel="noopener">
+        <div class="plat"><span>診断</span><span class="arrow">↗</span></div>
+        <h3>イベント診断16タイプ</h3>
+        <p>出るイベントと自分のタイプが分かる診断。</p>
+        <div class="chips"><span>16タイプ</span><span>イベント選び</span></div>
+      </a>
+      <a class="diag" href="https://muse.ai/s/fan-mai-xian-zhen-duan-wo6zfxa2wxwyq/ORiAjsBiIP6RmPw_J6SMd3I0IFE7S41AShvpeTL4sPE" target="_blank" rel="noopener">
+        <div class="plat"><span>診断</span><span class="arrow">↗</span></div>
+        <h3>販売先診断</h3>
+        <p>作品をどこで売るのが合うか分かる診断。</p>
+        <div class="chips"><span>販売先</span><span>同人・創作向け</span></div>
+      </a>
+    </div>
   </section>
 
   <section aria-labelledby="links">
@@ -256,32 +297,38 @@ footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);display
     <figcaption class="art-label">イラスト：しょっつる（Xより）</figcaption>
   </figure>
 
-  <section aria-labelledby="ideas">
-    <div class="sec-head"><span class="en-sub">IDEAS / WORKS</span><h2 id="ideas">ゲームとツールのアイデア</h2></div>
+  <section aria-labelledby="projects">
+    <div class="sec-head"><span class="en-sub">PROJECTS</span><h2 id="projects">現在進行中のプロジェクト</h2></div>
 
     <article class="idea wide">
-      <h3>解剖積層 — ドットを切るおもちゃ<span class="kind">ゲーム</span><span class="st">第1弾 公開中</span></h3>
-      <p class="spec">第1弾： <b>サケ</b> ／ 候補： <b>牛</b>・<b>クロマグロ</b>・<b>地球</b>・豚・鶏・クジラ・車・船・電車</p>
+      <h3>入稿サポート／クリエイターハブ<span class="kind">サービス</span><span class="st">受付中</span></h3>
+      <p>同人誌の入稿チェックを入口に、創作の「できた」を増やす場所を作っています。</p>
+    </article>
+
+    <article class="idea">
+      <h3>解剖積層シリーズ<span class="kind">ゲーム</span><span class="st">第2弾 製作中</span></h3>
+      <p>ドットで切れるおもちゃのシリーズ。第1弾のサケは公開中。</p>
+      <p class="spec">候補： <b>牛</b>・<b>クロマグロ</b>・<b>地球</b>・豚・鶏・クジラ・車・船・電車</p>
     </article>
 
     <article class="idea">
       <h3>KIRIWAKE<span class="kind">AIツール</span><span class="st">開発中</span></h3>
-      <p class="spec"><b>AI選択範囲</b> ・ <b>PSD書き出し</b></p>
+      <p>切り分けと書き出しのツール。PSD書き出しを開発中。</p>
+    </article>
+
+    <article class="idea">
+      <h3>LUMINA CAL<span class="kind">実験プロジェクト</span></h3>
+      <p>触れるホログラムステッカーの実験プロジェクト。</p>
     </article>
 
     <article class="idea">
       <h3>Stillpress 2.0<span class="kind">Webツール</span><span class="st">公開中</span></h3>
-      <p class="spec"><b>ブラウザ完結</b> ・ <b>HEIC変換</b></p>
+      <p>HEIC画像の変換ツール。ブラウザだけで完結します。</p>
     </article>
 
     <article class="idea">
       <h3>言葉リール<span class="kind">言葉の道具</span></h3>
-      <p class="spec"><b>語彙 2,049語</b> ・ <b>短文生成</b></p>
-    </article>
-
-    <article class="idea">
-      <h3>LUMINA CAL<span class="kind">実験サイト</span></h3>
-      <p class="spec"><b>光で色が変わる</b>カレンダーの実験</p>
+      <p>短い文を組み立てるジェネレータ。語彙は2,049語。</p>
     </article>
 
     <!-- AD SLOT 2: 広告タグはここに差し込む -->
