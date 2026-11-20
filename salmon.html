@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>サケ切りドットおもちゃ</title>
+    <style>
+      :root {
+        --bg-top: #cdeefb;
+        --bg-bottom: #8ecfee;
+        --ink: #0d3448;
+        --ink-soft: #33617a;
+        --panel: rgba(255, 255, 255, 0.72);
+        --panel-border: rgba(13, 52, 72, 0.18);
+        --btn-bg: rgba(255, 255, 255, 0.85);
+        --btn-ink: #0d3448;
+        --accent: #ef6c45;
+        --accent-ink: #ffffff;
+        --chip-bg: rgba(255, 255, 255, 0.6);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-top: #0d3049;
+          --bg-bottom: #061a29;
+          --ink: #e8f5fb;
+          --ink-soft: #a8c9da;
+          --panel: rgba(10, 38, 56, 0.78);
+          --panel-border: rgba(190, 230, 248, 0.22);
+          --btn-bg: rgba(21, 58, 82, 0.9);
+          --btn-ink: #e8f5fb;
+          --accent: #f07c52;
+          --accent-ink: #ffffff;
+          --chip-bg: rgba(21, 58, 82, 0.65);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+        overflow: hidden;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+      }
+      .stage {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+      .status {
+        position: absolute;
+        top: calc(10px + env(safe-area-inset-top));
+        left: 12px;
+        right: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        pointer-events: none;
+      }
+      .status .msg {
+        background: var(--chip-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 13px;
+        line-height: 1.35;
+        color: var(--ink);
+        backdrop-filter: blur(4px);
+      }
+      .status .count {
+        background: var(--chip-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: var(--ink-soft);
+        backdrop-filter: blur(4px);
+      }
+      .legend {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        font-size: 11px;
+        color: var(--ink-soft);
+        pointer-events: none;
+        max-width: 92%;
+      }
+      .legend span { display: inline-flex; align-items: center; gap: 4px; }
+      .legend i {
+        width: 10px; height: 10px;
+        border-radius: 2px;
+        display: inline-block;
+        border: 1px solid rgba(0,0,0,0.18);
+      }
+      .controls {
+        flex: 0 0 auto;
+        background: var(--panel);
+        border-top: 1px solid var(--panel-border);
+        backdrop-filter: blur(8px);
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        overflow: hidden;
+        background: var(--btn-bg);
+      }
+      .seg button {
+        border: 0;
+        background: transparent;
+        color: var(--btn-ink);
+        font: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 10px 20px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .btn {
+        border: 1px solid var(--panel-border);
+        background: var(--btn-bg);
+        color: var(--btn-ink);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 10px 16px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      .btn:active { transform: scale(0.97); }
+      .hint {
+        font-size: 12px;
+        color: var(--ink-soft);
+        line-height: 1.4;
+      }
+      @media (min-width: 720px) {
+        .controls { flex-direction: row; align-items: center; justify-content: space-between; }
+        .hint { max-width: 300px; text-align: right; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="ドット絵のサケ。なぞると切れて、回して見ることもできます"></canvas>
+        <div class="status">
+          <div class="msg" id="msg">「きる」モード：サケの上をスワイプすると、なぞった線で切れます</div>
+          <div class="count" id="count">ピース 1 / 24</div>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i style="background:#ef7d54"></i>身</span>
+          <span><i style="background:#f3efe4"></i>骨</span>
+          <span><i style="background:#f0dfba"></i>浮き袋</span>
+          <span><i style="background:#f59a1f"></i>卵（いくら）</span>
+          <span><i style="background:#a83a44"></i>内臓</span>
+          <span><i style="background:#c3ced4"></i>皮（銀）</span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="row">
+          <div class="seg" role="group" aria-label="モード切替">
+            <button id="modeCut" aria-pressed="true">✂ きる</button>
+            <button id="modeRot" aria-pressed="false">⟳ まわす</button>
+          </div>
+          <button class="btn" id="btnSanmai">三枚おろし</button>
+          <button class="btn" id="btnWagiri">輪切り</button>
+          <button class="btn" id="btnReset">もどす</button>
+        </div>
+        <div class="hint" id="hint">細かく何度も切ると、お刺身みたいな薄切りが作れます。「まわす」ではドラッグで視点を回せます。</div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+      // ============================================================
+      // サケのボクセルモデル生成
+      // 座標: x=頭(0)→尾, y=背(+)〜腹(-), z=側面。全部整数グリッド。
+      // ============================================================
+      var L = 116;              // 体のスライス数（頭〜尾びれ付け根）
+      var H = 13.5, W = 5.6;    // 体高・体幅の半分（最大）
+      var SPINE_Y = 1.0;        // 背骨のy位置
+
+      var hPts = [[0,0.40],[0.06,0.58],[0.16,0.80],[0.30,0.97],[0.42,1.00],[0.58,0.93],[0.74,0.72],[0.86,0.47],[0.94,0.30],[1,0.26]];
+      var wPts = [[0,0.34],[0.08,0.55],[0.20,0.80],[0.38,1.00],[0.60,0.90],[0.78,0.62],[0.90,0.36],[1,0.30]];
+
+      function prof(pts, t) {
+        if (t <= pts[0][0]) return pts[0][1];
+        for (var i = 1; i < pts.length; i++) {
+          if (t <= pts[i][0]) {
+            var x0 = pts[i-1][0], y0 = pts[i-1][1], x1 = pts[i][0], y1 = pts[i][1];
+            var u = (t - x0) / (x1 - x0), s = u * u * (3 - 2 * u);
+            return y0 + (y1 - y0) * s;
+          }
+        }
+        return pts[pts.length - 1][1];
+      }
+      function hash3(x, y, z) {
+        var n = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
+        n = (n ^ (n >> 13)) * 1274126177;
+        return ((n ^ (n >> 16)) >>> 0) / 4294967296;
+      }
+      function shade(hex, f) { // f: 0.85〜1.1程度の明暗
+        var n = parseInt(hex.slice(1), 16);
+        var r = Math.min(255, Math.max(0, Math.round(((n >> 16) & 255) * f)));
+        var g = Math.min(255, Math.max(0, Math.round(((n >> 8) & 255) * f)));
+        var b = Math.min(255, Math.max(0, Math.round((n & 255) * f)));
+        return "rgb(" + r + "," + g + "," + b + ")";
+      }
+
+      var VX = [], VY = [], VZ = [], VCOL = [];
+      var grid = new Map();
+      function gkey(x, y, z) { return (x + 4) + (y + 64) * 256 + (z + 64) * 65536; }
+      function addVoxel(x, y, z, col) {
+        var k = gkey(x, y, z);
+        if (grid.has(k)) return;
+        grid.set(k, VX.length);
+        VX.push(x); VY.push(y); VZ.push(z); VCOL.push(col);
+      }
+
+      var roeCols = ["#f59a1f", "#f7b733", "#ee8a0a", "#fca93c"];
+
+      // 皮の色（表面ボクセル専用：第2パスで付け直す）
+      function skinColor(x, yi, zi, h, w) {
+        var hv = hash3(x, yi, zi);
+        var yn = yi / h;
+        if (x === 12) return yn > 0.3 ? "#42566a" : (yn > -0.35 ? "#9fb0ba" : "#d9e2e2"); // エラ
+        if (x >= 6 && x <= 9 && yi >= 2 && yi <= 4 && Math.abs(zi) > w - 1.4) {
+          return (x === 7 && yi === 4) ? "#e8f1f4" : "#141c22"; // 目＋光
+        }
+        if (x <= 2 && yi === -3 && Math.abs(zi) <= 2) return "#8a5a44"; // 口
+        if (yn > 0.30) {
+          if (hv < 0.17) return "#26313c"; // 黒斑点
+          return shade("#5d7488", 0.92 + hv * 0.16); // 背：鋼色
+        }
+        if (yn > -0.35) {
+          if (Math.abs(yn) < 0.07) return shade("#a7b8c0", 0.95 + hv * 0.08); // 側線
+          return shade("#c3ced4", 0.94 + hv * 0.1); // 体側：銀
+        }
+        return shade("#eef3f3", 0.96 + hv * 0.06); // 腹：白
+      }
+
+      // ---- 体（第1パス：内側の色で全部埋める） ----
+      for (var x = 0; x < L; x++) {
+        var t = x / (L - 1);
+        var h = H * prof(hPts, t), w = W * prof(wPts, t);
+        var hi = Math.ceil(h), wi = Math.ceil(w);
+        for (var yi = -hi; yi <= hi; yi++) {
+          for (var zi = -wi; zi <= wi; zi++) {
+            var r2 = (yi / h) * (yi / h) + (zi / w) * (zi / w);
+            if (r2 > 1) continue;
+            var hv = hash3(x, yi, zi);
+            var col;
+            if (Math.abs(zi) <= 1 && Math.abs(yi - SPINE_Y) <= 1) {
+              col = shade("#f3efe4", (x % 4 === 0) ? 1.0 : 0.93); // 背骨
+            } else if (x < 7 && Math.abs(zi) <= 2 && Math.abs(yi - 1) <= 2) {
+              col = shade("#e8e2d2", 0.94 + hv * 0.1); // 頭の骨
+            } else if (t > 0.18 && t < 0.78 && Math.abs(zi) <= 1.1 && yi >= SPINE_Y - 2.2 && yi <= SPINE_Y - 1.0) {
+              col = shade("#7c2d33", 0.92 + hv * 0.14); // 腎臓（背骨の下の暗赤ライン）
+            } else if (t > 0.24 && t < 0.70 && Math.abs(zi) <= 1.2 && yi >= SPINE_Y + 1.3 && yi <= SPINE_Y + 2.8) {
+              col = shade("#f0dfba", 0.95 + hv * 0.08); // 浮き袋
+            } else if (t > 0.08 && t < 0.15 && yi >= -4.5 && yi <= -2.0 && Math.abs(zi) <= 1.6) {
+              col = shade("#bf2f3c", 0.92 + hv * 0.14); // 心臓
+            } else if (t > 0.15 && t < 0.30 && yi >= -3.2 && yi <= 0.2 && Math.abs(zi) <= 2.0) {
+              col = shade("#9e3542", 0.9 + hv * 0.16); // 胃
+            } else if (t > 0.13 && t < 0.27 && yi >= -0.8 && yi <= 2.2 && Math.abs(zi) <= 2.4 && hv > 0.25) {
+              col = shade("#8a3a30", 0.9 + hv * 0.16); // 肝臓
+            } else if (t > 0.30 && t < 0.62 && yi >= -2.2 && yi <= 1.6 && Math.abs(zi) >= 1.3 && Math.abs(zi) <= 3.4 && hv < 0.82) {
+              col = shade(roeCols[Math.floor(hash3(x * 3, yi * 5, zi * 7) * 4)], 0.94 + hv * 0.1); // 卵（すじこ）
+            } else if (t > 0.30 && t < 0.56 && yi >= -3.4 && yi <= 0.4 && Math.abs(zi) <= 2.2) {
+              col = shade(hv < 0.5 ? "#c65f57" : "#d98a76", 0.92 + hv * 0.12); // 腸
+            } else if (Math.abs(zi) >= 1.4 && Math.abs(zi) <= 2.4 && Math.abs(yi - SPINE_Y) <= 1.3) {
+              col = shade("#cf4b32", 0.92 + hv * 0.12); // 血合い
+            } else {
+              // ===== 身 =====
+              var band = ((x + yi * 0.6) % 7 + 7) % 7;
+              if (band < 1.15) col = shade("#f8d3ae", 0.96 + hv * 0.06); // 脂の白い筋
+              else col = shade("#ef7d54", 0.9 + hv * 0.17);              // サーモンピンク
+            }
+            addVoxel(x, yi, zi, col);
+          }
+        }
+      }
+
+      // ---- 第2パス：表面ボクセルに皮の色を付ける ----
+      // （6方向のどれかに隣が無ければ表面。断面の内側は第1パスの色のまま残る）
+      var bodyCount = VX.length;
+      for (var bi2 = 0; bi2 < bodyCount; bi2++) {
+        var sx = VX[bi2], sy2 = VY[bi2], sz = VZ[bi2];
+        var surf = false;
+        var dirs = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+        for (var di = 0; di < 6; di++) {
+          if (!grid.has(gkey(sx + dirs[di][0], sy2 + dirs[di][1], sz + dirs[di][2]))) { surf = true; break; }
+        }
+        if (surf) {
+          var tt = sx / (L - 1);
+          VCOL[bi2] = skinColor(sx, sy2, sz, H * prof(hPts, tt), W * prof(wPts, tt));
+        }
+      }
+
+      // ---- ひれ ----
+      function finCol(x, y, z, base) {
+        var hv = hash3(x * 7, y * 3, z * 11);
+        if (hv < 0.14) return "#2b3641";
+        return shade(base, 0.9 + hv * 0.18);
+      }
+      // 尾びれ
+      for (var fx = 0; fx <= 11; fx++) {
+        var fh2 = fx <= 6 ? 3.4 + fx * 0.95 : 9.1 - (fx - 6) * 0.55;
+        var notch = fx >= 9 ? (fx - 8) * 1.1 : 0;
+        var fr = Math.round(fh2);
+        for (var fy = -fr; fy <= fr; fy++) {
+          if (Math.abs(fy) < notch) continue;
+          addVoxel(L + fx, fy, 0, finCol(L + fx, fy, 0, "#5f7488"));
+          if (fx <= 2 && Math.abs(fy) <= 3) {
+            addVoxel(L + fx, fy, 1, finCol(L + fx, fy, 1, "#5f7488"));
+            addVoxel(L + fx, fy, -1, finCol(L + fx, fy, -1, "#5f7488"));
+          }
+        }
+      }
+      // 背びれ
+      for (var dx = 44; dx <= 70; dx++) {
+        var dh = dx < 54 ? (dx - 44) * 0.42 : 4.2 - (dx - 54) * 0.24;
+        if (dh < 0.4) continue;
+        var yTop = Math.round(H * prof(hPts, dx / (L - 1)));
+        for (var dy2 = 0; dy2 <= Math.round(dh); dy2++) {
+          addVoxel(dx, yTop + dy2, 0, finCol(dx, yTop + dy2, 0, "#5b7183"));
+          if (dy2 === 0) { addVoxel(dx, yTop, 1, finCol(dx, yTop, 1, "#5b7183")); addVoxel(dx, yTop, -1, finCol(dx, yTop, -1, "#5b7183")); }
+        }
+      }
+      // 脂びれ
+      for (var ax = 90; ax <= 100; ax++) {
+        var ah = 1.8 * Math.sin(Math.PI * (ax - 90) / 10);
+        if (ah < 0.7) continue;
+        var yTa = Math.round(H * prof(hPts, ax / (L - 1)));
+        for (var ay = 0; ay <= Math.round(ah); ay++) addVoxel(ax, yTa + ay, 0, finCol(ax, yTa + ay, 5, "#6d8091"));
+      }
+      // 臀びれ
+      for (var bx = 86; bx <= 102; bx++) {
+        var bh = bx < 94 ? (bx - 86) * 0.33 : 2.6 - (bx - 94) * 0.3;
+        if (bh < 0.4) continue;
+        var yBot = -Math.round(H * prof(hPts, bx / (L - 1)));
+        for (var by2 = 0; by2 <= Math.round(bh); by2++) addVoxel(bx, yBot - by2, 0, finCol(bx, yBot - by2, 3, "#5b7183"));
+      }
+      // 胸びれ
+      for (var s = -1; s <= 1; s += 2) {
+        for (var d = 0; d <= 4; d++) {
+          var px = 13 + d, pz = Math.round(W * prof(wPts, px / (L - 1))) + (d >= 2 ? 1 : 0);
+          addVoxel(px, -2 - Math.round(d * 0.5), s * pz, finCol(px, d, s * 9, "#54687a"));
+          if (d >= 1) addVoxel(px, -2 - Math.round(d * 0.5), s * (pz + 1), finCol(px, d, s * 13, "#54687a"));
+        }
+      }
+
+      var N = VX.length;
+      var CX = (L + 11) / 2; // モデル中心x
+      var posX = new Int16Array(VX), posY = new Int16Array(VY), posZ = new Int16Array(VZ);
+
+      // ============================================================
+      // ピース管理
+      // ============================================================
+      var MAX_PIECES = 24;
+      var pieceOf = new Int16Array(N); // 全て0で初期化
+      var pieces = new Map();          // id -> {cx,cy,cz, tx,ty,tz, count}
+      var nextPieceId = 1;
+      pieces.set(0, { cx: 0, cy: 0, cz: 0, tx: 0, ty: 0, tz: 0, count: N });
+      var generation = 0; // もどす後の統合タイミング管理
+
+      var visList = [];
+      function recomputeVisible() {
+        visList.length = 0;
+        for (var i = 0; i < N; i++) {
+          var p = pieceOf[i], x = posX[i], y = posY[i], z = posZ[i];
+          var nb = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+          for (var j = 0; j < 6; j++) {
+            var idx = grid.get(gkey(x + nb[j][0], y + nb[j][1], z + nb[j][2]));
+            if (idx === undefined || pieceOf[idx] !== p) { visList.push(i); break; }
+          }
+        }
+      }
+      recomputeVisible();
+
+      function alivePieceCount() {
+        var c = 0;
+        pieces.forEach(function (pc) { if (pc.count > 0) c++; });
+        return c;
+      }
+      function refreshCounts() {
+        pieces.forEach(function (pc) { pc.count = 0; });
+        for (var i = 0; i < N; i++) pieces.get(pieceOf[i]).count++;
+      }
+      function enforceCap() {
+        while (alivePieceCount() > MAX_PIECES) {
+          // 最小ピースを、重心が一番近いピースへ統合
+          var cents = new Map();
+          pieces.forEach(function (pc, id) { cents.set(id, [0, 0, 0, 0]); });
+          for (var i = 0; i < N; i++) {
+            var c = cents.get(pieceOf[i]);
+            c[0] += posX[i]; c[1] += posY[i]; c[2] += posZ[i]; c[3]++;
+          }
+          var smallId = -1, smallN = Infinity;
+          cents.forEach(function (c, id) { if (c[3] > 0 && c[3] < smallN) { smallN = c[3]; smallId = id; } });
+          var sc = cents.get(smallId), bestId = -1, bestD = Infinity;
+          cents.forEach(function (c, id) {
+            if (id === smallId || c[3] === 0) return;
+            var dx = c[0] / c[3] - sc[0] / sc[3], dy = c[1] / c[3] - sc[1] / sc[3], dz = c[2] / c[3] - sc[2] / sc[3];
+            var dd = dx * dx + dy * dy + dz * dz;
+            if (dd < bestD) { bestD = dd; bestId = id; }
+          });
+          if (bestId < 0) break;
+          for (var j = 0; j < N; j++) if (pieceOf[j] === smallId) pieceOf[j] = bestId;
+          pieces.delete(smallId);
+          refreshCounts();
+        }
+      }
+
+      // ============================================================
+      // 描画
+      // ============================================================
+      var cv = document.getElementById("cv");
+      var ctx = cv.getContext("2d");
+      var stage = document.getElementById("stage");
+      var msgEl = document.getElementById("msg");
+      var countEl = document.getElementById("count");
+      var viewW = 0, viewH = 0, scale = 10, ccx = 0, ccy = 0;
+
+      function resize() {
+        var r = stage.getBoundingClientRect();
+        var dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+        viewW = r.width; viewH = r.height;
+        cv.width = Math.round(r.width * dpr);
+        cv.height = Math.round(r.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        scale = Math.min(viewW / 148, viewH / 60);
+        ccx = viewW / 2; ccy = viewH / 2;
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      var yaw = -0.92, pitch = 0.42;
+      var sX = new Float32Array(N), sY = new Float32Array(N), sD = new Float32Array(N), sS = new Float32Array(N);
+      var bendZ = new Float32Array(L + 16);
+
+      function computeFrame(now) {
+        var phase = now * 0.0011;
+        for (var bx = 0; bx < bendZ.length; bx++) {
+          var u = Math.max(0, (bx - 8) / L);
+          bendZ[bx] = 3.1 * Math.pow(u, 1.7) * Math.sin(phase * 2.1 - bx * 0.055);
+        }
+        var yawR = yaw + 0.05 * Math.sin(phase * 0.6);
+        var cy1 = Math.cos(yawR), sy1 = Math.sin(yawR);
+        var cp = Math.cos(pitch), sp = Math.sin(pitch);
+        for (var i = 0; i < N; i++) {
+          var pc = pieces.get(pieceOf[i]);
+          var mx = posX[i] - CX + pc.cx;
+          var my = posY[i] + pc.cy + 0.35 * Math.sin(phase * 0.9);
+          var mz = posZ[i] + pc.cz + bendZ[posX[i]];
+          // Rx(pitch) → Ry(yaw)
+          var y1 = my * cp - mz * sp;
+          var z1 = my * sp + mz * cp;
+          var x2 = mx * cy1 + z1 * sy1;
+          var z2 = -mx * sy1 + z1 * cy1;
+          var persp = 1 + z2 * 0.0012;
+          sX[i] = ccx + x2 * scale * persp;
+          sY[i] = ccy - y1 * scale * persp;
+          sD[i] = z2;
+          sS[i] = scale * 1.14 * persp;
+        }
+        return { yawR: yawR };
+      }
+
+      // 泡
+      var bubbles = [];
+      for (var bi = 0; bi < 14; bi++) {
+        bubbles.push({ x: Math.random(), y: Math.random(), r: 2 + Math.random() * 5, v: 0.008 + Math.random() * 0.02, wob: Math.random() * 6.28 });
+      }
+
+      var trail = null; // 切断ドラッグ中の軌跡 [{x,y}...]
+      var renderIdx = [];
+
+      function draw(now) {
+        var fr = computeFrame(now);
+        ctx.clearRect(0, 0, viewW, viewH);
+
+        // 泡
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 1.2;
+        for (var i = 0; i < bubbles.length; i++) {
+          var b = bubbles[i];
+          b.y -= b.v * 0.016;
+          if (b.y < -0.03) { b.y = 1.03; b.x = Math.random(); }
+          var bxp = b.x * viewW + Math.sin(now * 0.001 + b.wob) * 6;
+          ctx.beginPath();
+          ctx.arc(bxp, b.y * viewH, b.r, 0, 6.2832);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 魚（奥→手前のペインター方式）
+        renderIdx = visList.slice();
+        renderIdx.sort(function (a, b) { return sD[a] - sD[b]; });
+        for (var j = 0; j < renderIdx.length; j++) {
+          var vi = renderIdx[j], s = sS[vi];
+          ctx.fillStyle = VCOL[vi];
+          ctx.fillRect(sX[vi] - s / 2, sY[vi] - s / 2, s, s);
+        }
+
+        // 切断ライン
+        if (trail && trail.length > 1) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(255,255,255,0.95)";
+          ctx.lineWidth = 3;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.shadowColor = "rgba(239,108,69,0.8)";
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.moveTo(trail[0].x, trail[0].y);
+          for (var k = 1; k < trail.length; k++) ctx.lineTo(trail[k].x, trail[k].y);
+          ctx.stroke();
+          ctx.restore();
+        }
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+
+      // ピースのスライドアニメーション
+      setInterval(function () {
+        pieces.forEach(function (pc) {
+          pc.cx += (pc.tx - pc.cx) * 0.16;
+          pc.cy += (pc.ty - pc.cy) * 0.16;
+          pc.cz += (pc.tz - pc.cz) * 0.16;
+          if (Math.abs(pc.tx - pc.cx) < 0.01) pc.cx = pc.tx;
+          if (Math.abs(pc.ty - pc.cy) < 0.01) pc.cy = pc.ty;
+          if (Math.abs(pc.tz - pc.cz) < 0.01) pc.cz = pc.tz;
+        });
+      }, 16);
+
+      function updateCount() {
+        countEl.textContent = "ピース " + alivePieceCount() + " / " + MAX_PIECES;
+      }
+      function setMsg(t) { msgEl.textContent = t; }
+
+      // ============================================================
+      // 切断（画面空間の線で振り分け）
+      // ============================================================
+      function screenNormalToModel(nx, ny, yawR) {
+        // カメラ空間方向 (nx, -ny, 0) をモデル空間へ戻す: Rx(-pitch) → Ry(-yaw)
+        var dx = nx, dy = -ny, dz = 0;
+        var cy1 = Math.cos(-yawR), sy1 = Math.sin(-yawR);
+        var x1 = dx * cy1 + dz * sy1, z1 = -dx * sy1 + dz * cy1, y1 = dy;
+        var cp = Math.cos(-pitch), sp = Math.sin(-pitch);
+        var y2 = y1 * cp - z1 * sp, z2 = y1 * sp + z1 * cp;
+        return [x1, y2, z2];
+      }
+
+      function doCut(x0, y0, x1, y1) {
+        var dx = x1 - x0, dy = y1 - y0;
+        var len = Math.hypot(dx, dy);
+        if (len < 26) return;
+        var yawR = yaw + 0.05 * Math.sin(performance.now() * 0.0011 * 0.6);
+        // ピースごとに両側の数を数える
+        var sideCount = new Map();
+        var sides = new Int8Array(N);
+        for (var i = 0; i < N; i++) {
+          var cr = dx * (sY[i] - y0) - dy * (sX[i] - x0);
+          sides[i] = cr > 0 ? 1 : -1;
+          var p = pieceOf[i];
+          var sc = sideCount.get(p);
+          if (!sc) { sc = [0, 0]; sideCount.set(p, sc); }
+          if (cr > 0) sc[0]++; else sc[1]++;
+        }
+        var nx = -dy / len, ny = dx / len; // 線の法線（画面）
+        var made = 0, thinSlice = false;
+        sideCount.forEach(function (sc, pid) {
+          if (sc[0] < 5 || sc[1] < 5) return;
+          var parent = pieces.get(pid);
+          // 小さい方を新しいピースにする
+          var newSide = sc[0] <= sc[1] ? 1 : -1;
+          var nid = nextPieceId++;
+          var dir = screenNormalToModel(nx * newSide, ny * newSide, yawR);
+          var dist = 8.5;
+          pieces.set(nid, {
+            cx: parent.cx, cy: parent.cy, cz: parent.cz,
+            tx: parent.tx + dir[0] * dist, ty: parent.ty + dir[1] * dist, tz: parent.tz + dir[2] * dist,
+            count: 0
+          });
+          var moved = 0;
+          for (var i = 0; i < N; i++) {
+            if (pieceOf[i] === pid && sides[i] === newSide) { pieceOf[i] = nid; moved++; }
+          }
+          if (moved > 0 && moved < 260) thinSlice = true;
+          made++;
+        });
+        if (made === 0) { setMsg("そこは切れませんでした。サケの上をなぞってみてください"); return; }
+        refreshCounts();
+        enforceCap();
+        recomputeVisible();
+        updateCount();
+        if (thinSlice && alivePieceCount() >= 6) setMsg("薄切りができました。お刺身みたいですね");
+        else setMsg("切りました（全" + alivePieceCount() + "ピース）。続けてなぞるともっと細かく切れます");
+      }
+
+      // ============================================================
+      // 自動の切り方
+      // ============================================================
+      function resetAll(instantMsg) {
+        generation++;
+        pieceOf.fill(0);
+        pieces.clear();
+        pieces.set(0, { cx: 0, cy: 0, cz: 0, tx: 0, ty: 0, tz: 0, count: N });
+        nextPieceId = 1;
+        recomputeVisible();
+        updateCount();
+        if (instantMsg) setMsg(instantMsg);
+      }
+      function collapseLater(gen) {
+        setTimeout(function () {
+          if (gen !== generation) return;
+          pieceOf.fill(0);
+          pieces.clear();
+          pieces.set(0, { cx: 0, cy: 0, cz: 0, tx: 0, ty: 0, tz: 0, count: N });
+          nextPieceId = 1;
+          recomputeVisible();
+          updateCount();
+        }, 700);
+      }
+
+      document.getElementById("btnReset").addEventListener("click", function () {
+        generation++;
+        var gen = generation;
+        pieces.forEach(function (pc) { pc.tx = 0; pc.ty = 0; pc.tz = 0; });
+        setMsg("もとに戻しました");
+        collapseLater(gen);
+      });
+
+      document.getElementById("btnSanmai").addEventListener("click", function () {
+        resetAll();
+        // z>=2: 左身 / z<=-2: 右身 / それ以外: 中骨
+        var ids = { left: nextPieceId++, right: nextPieceId++, bone: nextPieceId++ };
+        pieces.set(ids.left, { cx: 0, cy: 0, cz: 0, tx: 0, ty: 1.5, tz: 11, count: 0 });
+        pieces.set(ids.right, { cx: 0, cy: 0, cz: 0, tx: 0, ty: 1.5, tz: -11, count: 0 });
+        pieces.set(ids.bone, { cx: 0, cy: 0, cz: 0, tx: 0, ty: -2.5, tz: 0, count: 0 });
+        pieces.delete(0);
+        for (var i = 0; i < N; i++) {
+          pieceOf[i] = posZ[i] >= 2 ? ids.left : (posZ[i] <= -2 ? ids.right : ids.bone);
+        }
+        refreshCounts();
+        recomputeVisible();
+        updateCount();
+        setMsg("三枚おろしになりました。身をさらに切るとサクやお刺身にできます");
+      });
+
+      document.getElementById("btnWagiri").addEventListener("click", function () {
+        resetAll();
+        var total = L + 12, slabs = 8, wdt = total / slabs;
+        var slabIds = [];
+        for (var sIdx = 0; sIdx < slabs; sIdx++) {
+          var id = nextPieceId++;
+          slabIds.push(id);
+          pieces.set(id, {
+            cx: 0, cy: 0, cz: 0,
+            tx: (sIdx - (slabs - 1) / 2) * 4.4, ty: 0, tz: (sIdx - (slabs - 1) / 2) * 0.9,
+            count: 0
+          });
+        }
+        pieces.delete(0);
+        for (var i = 0; i < N; i++) {
+          var si = Math.min(slabs - 1, Math.floor(posX[i] / wdt));
+          pieceOf[i] = slabIds[si];
+        }
+        refreshCounts();
+        recomputeVisible();
+        updateCount();
+        setMsg("輪切りになりました。1枚ずつ、さらに薄く切ることもできます");
+      });
+
+      // ============================================================
+      // モード切替とポインタ操作
+      // ============================================================
+      var mode = "cut";
+      var modeCutBtn = document.getElementById("modeCut");
+      var modeRotBtn = document.getElementById("modeRot");
+      var hintEl = document.getElementById("hint");
+      function setMode(m) {
+        mode = m;
+        modeCutBtn.setAttribute("aria-pressed", m === "cut" ? "true" : "false");
+        modeRotBtn.setAttribute("aria-pressed", m === "rotate" ? "true" : "false");
+        if (m === "cut") {
+          setMsg("「きる」モード：サケの上をスワイプすると、なぞった線で切れます");
+          hintEl.textContent = "細かく何度も切ると、お刺身みたいな薄切りが作れます。「まわす」ではドラッグで視点を回せます。";
+        } else {
+          setMsg("「まわす」モード：ドラッグで視点を回せます");
+          hintEl.textContent = "ぐるっと回すと、背中側や腹側、断面の様子が見られます。切るときは「きる」に戻してください。";
+        }
+      }
+      modeCutBtn.addEventListener("click", function () { setMode("cut"); });
+      modeRotBtn.addEventListener("click", function () { setMode("rotate"); });
+
+      var dragging = false, lastPX = 0, lastPY = 0, dragStart = null;
+      function toCanvas(e) {
+        var r = cv.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      }
+      cv.addEventListener("pointerdown", function (e) {
+        dragging = true;
+        cv.setPointerCapture(e.pointerId);
+        lastPX = e.clientX; lastPY = e.clientY;
+        dragStart = { x: e.clientX, y: e.clientY };
+        if (mode === "cut") trail = [toCanvas(e)];
+      });
+      cv.addEventListener("pointermove", function (e) {
+        if (!dragging) return;
+        if (mode === "rotate") {
+          yaw += (e.clientX - lastPX) * 0.009;
+          pitch += (e.clientY - lastPY) * 0.007;
+          if (pitch > 1.25) pitch = 1.25;
+          if (pitch < -1.25) pitch = -1.25;
+        } else if (trail) {
+          var pt = toCanvas(e);
+          var last = trail[trail.length - 1];
+          if (Math.hypot(pt.x - last.x, pt.y - last.y) > 4) trail.push(pt);
+        }
+        lastPX = e.clientX; lastPY = e.clientY;
+      });
+      function endDrag(e) {
+        if (!dragging) return;
+        dragging = false;
+        if (mode === "cut" && trail && trail.length > 1) {
+          var a = trail[0], b = trail[trail.length - 1];
+          doCut(a.x, a.y, b.x, b.y);
+        }
+        trail = null;
+        dragStart = null;
+      }
+      cv.addEventListener("pointerup", endDrag);
+      cv.addEventListener("pointercancel", endDrag);
+
+      updateCount();
+    </script>
+  </body>
+</html>

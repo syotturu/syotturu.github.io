@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>しょっつる / SHOTTOOL</title>
+<style>
+:root{
+  --bg:#fcfdff; --surface:#ffffff; --surface2:#eef4fc;
+  --ink:#14213a; --ink2:#54627e; --line:#dde6f2; --line2:#b9cbe4;
+  --accent:#1d4fd7; --accent2:#0e9fd8; --accent-ink:#fff;
+  --lx:30%; --ly:22%; --holo-a:0deg;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0a1120; --surface:#101a30; --surface2:#0e1830;
+    --ink:#eaf1fd; --ink2:#93a5c4; --line:#1f2f4f; --line2:#33507f;
+    --accent:#7aa5ff; --accent2:#4cc3ee; --accent-ink:#081226;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.8;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:780px;margin:0 auto;padding:0 22px 72px}
+
+/* header */
+.topbar{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:20px 0 0;font-size:13px;color:var(--ink2)}
+.topbar .who{font-weight:700;color:var(--ink)}
+.hero{padding:34px 0 0;display:flex;gap:28px;align-items:flex-start}
+.hero .hero-text{flex:1;min-width:0}
+h1{font-size:clamp(50px,12vw,80px);line-height:1.08;margin:0;font-weight:900;letter-spacing:.01em}
+h1 .en{display:block;font-size:16px;letter-spacing:.34em;font-weight:500;margin-top:12px;color:var(--accent)}
+.lede{margin:22px 0 0;font-size:16px;max-width:32em}
+.lede strong{font-weight:900}
+.stats{margin:18px 0 0;font-size:13.5px;color:var(--ink2)}
+.stats b{color:var(--ink);font-weight:900;font-size:16px}
+.stats .sep{margin:0 10px;color:var(--line2)}
+@media(max-width:560px){.hero{flex-direction:column}.hero .seal-stage{margin:6px auto 0}}
+
+/* hologram drop seals: fixed glitter grains, one light source (--lx/--ly) shared by every seal */
+.seal-stage{flex:0 0 auto;text-align:center;perspective:700px}
+.seal{position:relative;display:inline-block;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.seal:active{cursor:grabbing}
+.seal .drop{position:relative;overflow:hidden;background:#dfeaf8;border-radius:4px 50% 50% 50%;transform:rotate(-45deg);box-shadow:inset 0 0 0 2px rgba(255,255,255,.75),0 10px 24px rgba(29,79,215,.18)}
+.seal .holo{position:absolute;inset:-30%;background:conic-gradient(from 210deg at 50% 50%,#bfe0ff,#c9f2e4,#ffe9f4,#fff3bf,#c7d7ff,#bfe0ff);filter:hue-rotate(var(--holo-a)) saturate(1.15);opacity:.9}
+.seal .grain{position:absolute;border-radius:50%;background:#fff;pointer-events:none}
+.seal .shine{position:absolute;inset:0;background:radial-gradient(circle at var(--lx) var(--ly),rgba(255,255,255,.95),rgba(255,255,255,.25) 34%,rgba(255,255,255,0) 62%);mix-blend-mode:screen;pointer-events:none}
+.seal .check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(0deg)}
+.seal .check svg{width:44%;height:44%;filter:drop-shadow(0 1px 2px rgba(20,40,90,.35))}
+.seal-hero .drop{width:158px;height:158px}
+.seal-hero{transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+.seal-hero.dragging{transition:none}
+.seal-hint{margin:14px 0 0;font-size:12px;color:var(--ink2);letter-spacing:.05em}
+.seal-dock{display:flex;gap:14px;justify-content:center;align-items:flex-end;margin:26px 0 2px;flex-wrap:wrap}
+.seal-dock .seal .drop{width:52px;height:52px}
+.seal-dock .seal:nth-child(1){transform:rotate(-9deg) translateY(3px)}
+.seal-dock .seal:nth-child(2){transform:rotate(6deg)}
+.seal-dock .seal:nth-child(3){transform:rotate(-4deg) translateY(5px)}
+.seal-dock .seal:nth-child(4){transform:rotate(10deg)}
+.seal-dock .seal:nth-child(5){transform:rotate(-12deg) translateY(2px)}
+.seal-dock .seal{transition:transform .3s ease}
+.seal-dock .seal:hover{transform:rotate(0deg) translateY(-4px)}
+
+/* full-bleed marquee bands */
+@keyframes marquee-x{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+.marquee{overflow:hidden}
+.marquee .track{display:flex;width:max-content;animation:marquee-x linear infinite}
+.marquee .set{display:flex;flex:0 0 auto}
+.marquee .tile{overflow:hidden;flex:0 0 auto}
+.marquee .tile img{width:100%;height:100%;object-fit:cover;display:block}
+.hero-art{margin:36px calc(50% - 50vw) 0;width:100vw;position:relative;background:var(--surface2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.hero-art .track{animation-duration:150s}
+.hero-art .tile{width:210px;height:300px}
+.hero-art .tile img{object-position:50% 22%}
+.art-label{position:absolute;left:22px;bottom:16px;margin:0;padding:6px 12px;font-size:12.5px;color:var(--ink);letter-spacing:.06em;background:var(--bg);border:1px solid var(--line);z-index:2}
+@media(max-width:560px){.hero-art .tile{width:150px;height:216px}.hero-art .track{animation-duration:110s}}
+.photo-art{margin:40px calc(50% - 50vw) 0;width:100vw;position:relative;background:var(--surface2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.photo-art .track{animation-duration:110s}
+.photo-art .tile{width:330px;height:200px}
+@media(max-width:560px){.photo-art .tile{width:250px;height:152px}.photo-art .track{animation-duration:80s}}
+
+/* word-salad ticker */
+.salad{margin:44px calc(50% - 50vw) 0;width:100vw;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);padding:9px 0}
+.salad .track{display:flex;width:max-content;animation:marquee-x 100s linear infinite}
+.salad .set{display:flex;flex:0 0 auto;white-space:nowrap;font-size:13.5px;color:var(--ink2);letter-spacing:.04em}
+.salad .s{padding:0 6px}
+.salad .dot{color:var(--accent);font-weight:900}
+
+section{padding:44px 0 4px}
+.sec-head{margin-bottom:20px}
+.sec-head h2{font-size:24px;margin:0;font-weight:900;padding-bottom:10px;border-bottom:2px solid var(--ink);display:inline-block;padding-right:28px}
+.sec-head .en-sub{display:block;font-size:11.5px;letter-spacing:.28em;color:var(--accent);font-weight:700;margin-bottom:6px}
+
+/* primary links */
+.feat{display:block;text-decoration:none;padding:22px 2px 20px;border-bottom:1px solid var(--line)}
+.feat:first-of-type{padding-top:4px}
+.feat .plat{font-size:13px;color:var(--ink2);display:flex;justify-content:space-between;align-items:baseline}
+.feat .plat .arrow{font-size:20px;color:var(--accent);font-weight:700}
+.feat h3{margin:6px 0 4px;font-size:27px;font-weight:900;line-height:1.35}
+.feat p{margin:0;font-size:14.5px;color:var(--ink2);line-height:1.7;max-width:32em}
+.feat .meta{margin-top:10px;font-size:13.5px;color:var(--ink2)}
+.feat .meta b{font-size:16px;color:var(--ink)}
+.feat:hover h3{color:var(--accent)}
+@media(min-width:680px){.feat.note-feat{margin-left:15%;padding-left:22px;border-left:1px solid var(--line)}}
+
+/* plain rows */
+.rows{margin-top:22px}
+.row{display:flex;gap:16px;align-items:baseline;padding:14px 2px;border-bottom:1px solid var(--line)}
+.row:first-child{border-top:1px solid var(--line)}
+.row h3{margin:0;font-size:16px;font-weight:900;flex:0 0 9.5em}
+.row p{margin:0;font-size:14px;color:var(--ink2);line-height:1.65;flex:1}
+.row .status{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--ink2);white-space:nowrap}
+.row .status.live{color:var(--accent)}
+.row a.ext{color:var(--accent);font-weight:700;text-decoration:none;white-space:nowrap}
+@media(max-width:560px){.row{flex-wrap:wrap}.row h3{flex-basis:100%}}
+
+/* featured toy */
+.toy{display:block;text-decoration:none;background:linear-gradient(135deg,#123a8f,#1d4fd7 55%,#0e9fd8);color:#fff;padding:30px 26px 26px;position:relative;overflow:hidden}
+.toy::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--lx) var(--ly),rgba(255,255,255,.28),rgba(255,255,255,0) 55%);pointer-events:none}
+.toy .plat{font-size:13px;color:#bcd4ff;display:flex;justify-content:space-between;align-items:baseline}
+.toy .plat .arrow{font-size:22px;font-weight:700;color:#fff}
+.toy h3{margin:8px 0 6px;font-size:clamp(26px,6vw,34px);font-weight:900;line-height:1.3}
+.toy p{margin:0;font-size:14.5px;line-height:1.75;color:#dceaff;max-width:34em}
+.toy .chips{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+.toy .chips span{font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:3px 12px;color:#fff}
+.toy:hover h3{text-decoration:underline;text-underline-offset:5px}
+
+/* panels */
+.panel{background:var(--surface2);padding:24px 22px;margin-top:2px}
+.panel h3{margin:0 0 6px;font-size:19px;font-weight:900}
+.panel>p{margin:0;font-size:14.5px;color:var(--ink2);max-width:36em}
+.panel ul{margin:16px 0 0;padding:0;list-style:none}
+.panel li{padding:11px 0;border-top:1px solid var(--line);font-size:14px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
+.panel li:first-child{border-top:none;padding-top:2px}
+.panel li b{font-size:15px}
+.panel li span{color:var(--ink2);font-size:13.5px}
+.price{color:var(--accent);font-weight:900}
+.cta-row{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 20px;border-radius:999px;font-weight:900;font-size:14.5px;text-decoration:none;border:1.5px solid var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;color:var(--ink)}
+
+/* ideas: editorial list */
+.idea{padding:20px 2px;border-bottom:1px solid var(--line)}
+.idea:first-of-type{padding-top:2px}
+.idea h3{margin:0;font-size:20px;font-weight:900;line-height:1.35}
+.idea h3 .kind{font-size:12.5px;font-weight:700;color:var(--accent);margin-left:10px;letter-spacing:.05em}
+.idea h3 .st{font-size:12px;font-weight:900;color:var(--accent2);border:1px solid var(--accent2);border-radius:999px;padding:1px 9px;margin-left:8px;vertical-align:2px;white-space:nowrap}
+.idea p{margin:6px 0 0;font-size:14.5px;color:var(--ink2);line-height:1.75;max-width:36em}
+.idea .spec{margin-top:8px;font-size:13px;color:var(--ink2)}
+.idea .spec b{color:var(--ink);font-weight:700}
+@media(min-width:680px){.idea:nth-of-type(even){margin-left:12%}.idea.wide p{max-width:44em}}
+.note-line{font-size:13px;color:var(--ink2);margin-top:16px}
+
+/* voices */
+.voice{padding:18px 2px;border-bottom:1px solid var(--line)}
+.voice:first-of-type{padding-top:2px}
+.voice h3{margin:0 0 4px;font-size:16.5px;font-weight:900;color:var(--accent)}
+.voice p{margin:0;font-size:15px;line-height:1.8;max-width:37em}
+.voice p b{font-weight:900}
+@media(min-width:680px){.voice:nth-of-type(even){margin-left:10%}}
+.src-note{font-size:12.5px;color:var(--ink2);margin-top:16px}
+
+footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}.marquee .track,.salad .track{animation:none}.seal-hero{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar"><span class="who">しょっつる</span><span>イラストと文章と、小さなツールを作る人</span></div>
+
+  <header class="hero">
+    <div class="hero-text">
+      <h1>しょっつる<span class="en">SHOTTOOL</span></h1>
+      <p class="lede">イラストを描き、日記を書き、小さなツールを自作する創作者。<strong>オリジナルキャラクター（#OC）のイラスト</strong>、280件を超える日記の連載、そして「あったら助かる」を形にする個人開発を続けています。</p>
+      <p class="stats"><b>681</b> X フォロワー<span class="sep">/</span>note の日記 <b>153 + 129</b> 件<span class="sep">/</span>公開中のおもちゃ <b>1</b> 本</p>
+    </div>
+    <div class="seal-stage">
+      <div class="seal seal-hero" id="sealHero" role="img" aria-label="ホログラムのしずく型シール（チェックマークのみ）。ドラッグで傾きます">
+        <div class="drop"><div class="holo"></div><div class="grains"></div><div class="shine"></div></div>
+        <div class="check"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 L9.5 18 L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <p class="seal-hint">しずくシールはドラッグで傾く。<br>光は指（ポインタ）の位置で動きます</p>
+    </div>
+  </header>
+
+  <div class="seal-dock" aria-hidden="true">
+    <div class="seal"><div class="drop"><div class="holo"></div><div class="grains"></div><div class="shine"></div></div><div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 L9.5 18 L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="seal"><div class="drop"><div class="holo"></div><div class="grains"></div><div class="shine"></div></div><div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 L9.5 18 L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="seal"><div class="drop"><div class="holo"></div><div class="grains"></div><div class="shine"></div></div><div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 L9.5 18 L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="seal"><div class="drop"><div class="holo"></div><div class="grains"></div><div class="shine"></div></div><div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 L9.5 18 L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="seal"><div class="drop"><div class="holo"></div><div class="grains"></div><div class="shine"></div></div><div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5 L9.5 18 L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+
+  <section aria-labelledby="play">
+    <div class="sec-head"><span class="en-sub">PLAY</span><h2 id="play">遊べるもの</h2></div>
+    <a class="toy" href="salmon.html" target="_blank" rel="noopener">
+      <div class="plat"><span>公開中のおもちゃ — ブラウザでそのまま遊べます</span><span class="arrow">↗</span></div>
+      <h3>サケ切りドットおもちゃ</h3>
+      <p>ドットでできたサケを、指やマウスでなぞって切れるおもちゃ。体軸116分割のドットの下には身・背骨・浮き袋・卵・内臓まで入っていて、切ったピースはそのままスライドします。細かく切ればお刺身みたいな薄切りも作れます。</p>
+      <div class="chips"><span>スワイプで切る</span><span>三枚おろし</span><span>輪切り</span><span>回して泳がせる</span></div>
+    </a>
+    <p class="note-line">第2弾の題材は検討中です。候補は下の「アイデア」にある解剖積層シリーズから。</p>
+  </section>
+
+  <section aria-labelledby="links">
+    <div class="sec-head"><span class="en-sub">LINKS</span><h2 id="links">まずここから</h2></div>
+    <a class="feat" href="https://x.com/SHOTTOOL" target="_blank" rel="noopener">
+      <div class="plat"><span>X — 日常とイラスト</span><span class="arrow">↗</span></div>
+      <h3>@SHOTTOOL</h3>
+      <p>オリジナルキャラクターのイラストを中心に投稿。制作の進捗や日々のこともここが一番速いです。</p>
+      <div class="meta">フォロワー <b>681</b> 人 ・ イラストレーター</div>
+    </a>
+    <a class="feat note-feat" href="https://note.com/shottool" target="_blank" rel="noopener">
+      <div class="plat"><span>note — 文章の拠点（販売中）</span><span class="arrow">↗</span></div>
+      <h3>note.com/shottool</h3>
+      <p>日記マガジンとメンバーシップ、あなたが指定したタイトルで記事を書く「執筆権」を販売しています。</p>
+      <div class="meta">日記マガジン <b>153</b> 件 ・ 『他人の日記』 <b>129</b> 件</div>
+    </a>
+
+    <div class="rows">
+      <div class="row">
+        <h3>pixiv FANBOX</h3>
+        <p>クリエイター「しょっつる」として活動中。支援・限定コンテンツはこちらから（リンクは各プラットフォームで「しょっつる」を検索してください）。</p>
+        <span class="status live">活動中</span>
+      </div>
+      <div class="row">
+        <h3>GitHub</h3>
+        <p>自作ツールの開発アカウント「syotturu」。下の「アイデア」にまとめたツールを公開・開発しています。</p>
+        <span class="status">テキスト掲載</span>
+      </div>
+      <div class="row">
+        <h3>BOOTH</h3>
+        <p>ショップ「SHOTTOOLBOX」。壁紙セット2種を販売中です。</p>
+        <a class="ext" href="https://shottool.booth.pm/" target="_blank" rel="noopener">開く ↗</a>
+      </div>
+      <div class="row">
+        <h3>SUZURI</h3>
+        <p>ショップ「しょっつる」。Tシャツとポーチを販売中です。</p>
+        <a class="ext" href="https://suzuri.jp/shottool" target="_blank" rel="noopener">開く ↗</a>
+      </div>
+      <div class="row">
+        <h3>ココナラ</h3>
+        <p>文章の校正と、同人誌の入稿サポートを出品中。詳しくは下の「サービス」へ。</p>
+        <span class="status live">受付中</span>
+      </div>
+    </div>
+  </section>
+
+  <figure class="hero-art marquee">
+    <div class="track">
+      <div class="set">
+        <div class="tile"><img src="img_01.jpg" alt="しょっつるのイラスト" width="1462" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_02.jpg" alt="しょっつるのイラスト" width="1364" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_03.jpg" alt="しょっつるのイラスト" width="1243" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_04.jpg" alt="しょっつるのイラスト" width="1273" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_05.jpg" alt="しょっつるのイラスト" width="784" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_06.jpg" alt="しょっつるのイラスト" width="1007" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_07.jpg" alt="しょっつるのイラスト" width="1373" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_08.jpg" alt="しょっつるのイラスト" width="1366" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_09.jpg" alt="しょっつるのイラスト" width="1526" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_10.jpg" alt="しょっつるのイラスト" width="1339" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_11.jpg" alt="しょっつるのイラスト" width="749" height="678" loading="lazy"></div>
+        <div class="tile"><img src="img_12.jpg" alt="しょっつるのイラスト" width="1202" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_13.jpg" alt="しょっつるのイラスト" width="1181" height="1748" loading="lazy"></div>
+        <div class="tile"><img src="img_14.jpg" alt="しょっつるのイラスト" width="1101" height="1653" loading="lazy"></div>
+        <div class="tile"><img src="img_15.jpg" alt="しょっつるのイラスト" width="1364" height="2048" loading="lazy"></div>
+      </div>
+      <div class="set" aria-hidden="true">
+        <div class="tile"><img src="img_16.jpg" alt="" width="1462" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_17.jpg" alt="" width="1364" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_18.jpg" alt="" width="1243" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_19.jpg" alt="" width="1273" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_20.jpg" alt="" width="784" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_21.jpg" alt="" width="1007" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_22.jpg" alt="" width="1373" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_23.jpg" alt="" width="1366" height="2048" loading="lazy"></div>
+        <div class="tile"><img src="img_24.jpg" alt="" width="1526" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_25.jpg" alt="" width="1339" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_26.jpg" alt="" width="749" height="678" loading="lazy"></div>
+        <div class="tile"><img src="img_27.jpg" alt="" width="1202" height="2000" loading="lazy"></div>
+        <div class="tile"><img src="img_28.jpg" alt="" width="1181" height="1748" loading="lazy"></div>
+        <div class="tile"><img src="img_29.jpg" alt="" width="1101" height="1653" loading="lazy"></div>
+        <div class="tile"><img src="img_30.jpg" alt="" width="1364" height="2048" loading="lazy"></div>
+      </div>
+    </div>
+    <figcaption class="art-label">イラスト：しょっつる（Xより）</figcaption>
+  </figure>
+
+  <section aria-labelledby="ideas">
+    <div class="sec-head"><span class="en-sub">IDEAS / WORKS</span><h2 id="ideas">ゲームとツールのアイデア</h2></div>
+
+    <article class="idea wide">
+      <h3>解剖積層 — ドットを切るおもちゃ<span class="kind">ゲーム</span><span class="st">第1弾 公開中</span></h3>
+      <p>ドット1つ1つに「元の位置」と「自分が何か（皮・身・骨・内臓）」を持たせて積み上げた立体を、切り方のルールで割っていくシリーズ。まっすぐ分ければ輪切り、背骨に沿えば三枚おろし、斜めの面で分ければ袈裟斬り。切り分けは重ねられるので、サクからお刺身の薄切りまで同じ仕組みでいけます。</p>
+      <p class="spec">第1弾： <b>サケ</b>（公開中） ／ 候補： <b>牛</b>（部位図がそのままゲームになる）・<b>クロマグロ</b>（同ドット縮尺で約9万ドット、断面の色の移り変わりが主役）・<b>地球</b>（地殻・マントル・外核・内核の層）・豚・鶏・クジラ・車・船・電車</p>
+    </article>
+
+    <article class="idea">
+      <h3>KIRIWAKE<span class="kind">AIツール</span><span class="st">開発中</span></h3>
+      <p>AIで選択範囲を作る切り分けツール。Photoshopのようなローカル作業の流れで使えて、PSDへの書き出しに対応しています。</p>
+      <p class="spec">できること： <b>AI選択範囲</b> ・ <b>PSD書き出し</b></p>
+    </article>
+
+    <article class="idea">
+      <h3>Stillpress 2.0<span class="kind">Webツール</span><span class="st">公開中</span></h3>
+      <p>HEIC画像をブラウザだけで変換できるツール。ファイルをサーバーに送らず、手元のブラウザで完結します。リンク共有は知人に限定して試験中です。</p>
+      <p class="spec">できること： <b>ブラウザ完結</b> ・ <b>HEIC変換</b></p>
+    </article>
+
+    <article class="idea">
+      <h3>言葉リール<span class="kind">言葉の道具</span></h3>
+      <p>2,049語の語彙から短い文を生む仕組み。『他人の日記』の文頭を飾るワードサラダはここから出ています。リール／スロット式のアプリ化は構想中。</p>
+      <p class="spec">素材： <b>語彙 2,049語</b> ・ <b>短文生成</b></p>
+    </article>
+
+    <article class="idea">
+      <h3>LUMINA CAL<span class="kind">実験サイト</span></h3>
+      <p>ホログラムシールそのものを触れるサイトにする実験。白い地に、光で色が変わるしずく型のチェックシール。このページの上部にあるシールは、その小さな試作です。グリッターの粒は固定で、動くのは一つの光源だけ——本物の箔に近づけるための決めごとです。</p>
+      <p class="spec">モチーフ： <b>しずく型シール</b> ・ <b>チェックのみ、文字なし</b></p>
+    </article>
+
+    <p class="note-line">開発アカウント： GitHub「syotturu」（個別リポジトリへのリンクは準備中です）</p>
+  </section>
+
+  <div class="salad" aria-label="『他人の日記』の文頭より">
+    <div class="track">
+      <div class="set"><span class="s">松林から見える本店を少しばかり頂戴すると満点の星空に無駄なく設定された添加物とそのままの姿を残す前回の予定を見出す心。</span><span class="dot">・</span><span class="s">明らかに展示されていると思う握りの腰掛けに聖骸布を見せつけると突風が吹きあたり一面もんどり打ったのちに群れが二つに分裂したという。</span><span class="dot">・</span><span class="s">みやびな音に導かれ半分のカラクリを打つ判断をすることに寸分の迷いもなくただあることを前にしていつかくる日を夢に見られる展示室。</span><span class="dot">・</span><span class="s">製鉄所の向かいで金魚すくいをしていた配達員が、焼きそばパンを三つ渡されたので月曜までに毛布の返却窓口を探す必要があるらしい。</span><span class="dot">・</span><span class="s">手形に向けて頑張っているとメガネのツルから伸びた判断がいくつものときめきが溢れる働きを持つカテゴリに分割するとかできるはず。</span><span class="dot">・</span><span class="s">茹でたてのまどろみに近づくことでのみ得られる窮屈な天体を模した面倒ごとを最先端の頂点に跨ったのちに円を描く唐紅の民衆。</span><span class="dot">・</span></div>
+      <div class="set" aria-hidden="true"><span class="s">松林から見える本店を少しばかり頂戴すると満点の星空に無駄なく設定された添加物とそのままの姿を残す前回の予定を見出す心。</span><span class="dot">・</span><span class="s">明らかに展示されていると思う握りの腰掛けに聖骸布を見せつけると突風が吹きあたり一面もんどり打ったのちに群れが二つに分裂したという。</span><span class="dot">・</span><span class="s">みやびな音に導かれ半分のカラクリを打つ判断をすることに寸分の迷いもなくただあることを前にしていつかくる日を夢に見られる展示室。</span><span class="dot">・</span><span class="s">製鉄所の向かいで金魚すくいをしていた配達員が、焼きそばパンを三つ渡されたので月曜までに毛布の返却窓口を探す必要があるらしい。</span><span class="dot">・</span><span class="s">手形に向けて頑張っているとメガネのツルから伸びた判断がいくつものときめきが溢れる働きを持つカテゴリに分割するとかできるはず。</span><span class="dot">・</span><span class="s">茹でたてのまどろみに近づくことでのみ得られる窮屈な天体を模した面倒ごとを最先端の頂点に跨ったのちに円を描く唐紅の民衆。</span><span class="dot">・</span></div>
+    </div>
+  </div>
+
+  <section aria-labelledby="note-sec">
+    <div class="sec-head"><span class="en-sub">NOTE</span><h2 id="note-sec">note で買える・読めるもの</h2></div>
+    <div class="panel">
+      <h3>書き続けてきた日記と、あなたの題材で書く1本</h3>
+      <p>日記マガジン153件、『他人の日記』129件。読むだけでも、題材を渡して書かせることもできます。</p>
+      <ul>
+        <li><b>メンバーシップ <span class="price">¥300 / 月</span></b><span>メンバー向け記事が読める月額プラン</span></li>
+        <li><b>タイトル指定で記事を書く権利 <span class="price">¥500</span></b><span>あなたが決めたタイトルで、しょっつるが記事を1本書きます</span></li>
+        <li><b>日記マガジン <span class="price">153件</span></b><span>日々の記録をまとめたマガジン</span></li>
+        <li><b>『他人の日記』 <span class="price">129件</span></b><span>他人の日記を読む・味わうシリーズ</span></li>
+      </ul>
+      <div class="cta-row">
+        <a class="btn primary" href="https://note.com/shottool" target="_blank" rel="noopener">note を開く ↗</a>
+        <a class="btn ghost" href="https://x.com/SHOTTOOL" target="_blank" rel="noopener">X で近況を見る ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <figure class="photo-art marquee">
+    <div class="track">
+      <div class="set">
+        <div class="tile"><img src="img_31.png" alt="しょっつるが撮影した写真（noteのアイキャッチ）" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_32.png" alt="しょっつるが撮影した写真（noteのアイキャッチ）" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_33.jpg" alt="しょっつるが撮影した写真（noteのアイキャッチ）" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_34.png" alt="しょっつるが撮影した写真（noteのアイキャッチ）" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_35.jpg" alt="しょっつるが撮影した写真（noteのアイキャッチ）" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_36.jpg" alt="しょっつるが撮影した写真（noteのアイキャッチ）" width="1280" height="670" loading="lazy"></div>
+      </div>
+      <div class="set" aria-hidden="true">
+        <div class="tile"><img src="img_37.png" alt="" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_38.png" alt="" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_39.jpg" alt="" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_40.png" alt="" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_41.jpg" alt="" width="1280" height="670" loading="lazy"></div>
+        <div class="tile"><img src="img_42.jpg" alt="" width="1280" height="670" loading="lazy"></div>
+      </div>
+    </div>
+    <figcaption class="art-label">写真：しょっつる（noteのアイキャッチ）</figcaption>
+  </figure>
+
+  <section aria-labelledby="service">
+    <div class="sec-head"><span class="en-sub">SERVICE</span><h2 id="service">サービス（ココナラ）</h2></div>
+    <div class="panel">
+      <h3>文章の校正・添削</h3>
+      <p>誤字脱字のチェックに加えて、読んでいて引っかかる表現の違和感を修正します。同人小説・創作文章・note記事など、書き手の文章に寄り添う校正です。AIで一次チェック、人間が最終確認をします。</p>
+      <ul>
+        <li><b>料金 <span class="price">¥2,000</span></b><span>10,000字まで / 納期3日 / 修正1回無料</span></li>
+        <li><b>対象</b><span>同人小説 / 創作 / note記事 ほか</span></li>
+        <li><b>受付</b><span>ココナラで出品中（ファイルのやり取りはココナラのトークルーム添付のみ）</span></li>
+      </ul>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>同人誌の入稿サポート</h3>
+      <p>印刷所の仕様に合わせたデータチェックと、直すところを平易な言葉にした修正リストをお渡しします。会議なし・DM受付の、決まった手順だけのサービスです。再チェック1回つき。</p>
+      <ul>
+        <li><b>料金 <span class="price">¥1,000</span></b><span>テスト価格 / 納期3日</span></li>
+        <li><b>内容</b><span>データチェック＋修正リスト＋再チェック1回</span></li>
+        <li><b>受付</b><span>ココナラで出品中</span></li>
+      </ul>
+      <div class="cta-row">
+        <a class="btn ghost" href="https://x.com/SHOTTOOL" target="_blank" rel="noopener">先にXで相談する ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="shop">
+    <div class="sec-head"><span class="en-sub">SHOP</span><h2 id="shop">物販</h2></div>
+    <div class="rows">
+      <div class="row">
+        <h3>BOOTH</h3>
+        <p>ショップ「SHOTTOOLBOX」を開設しました。<a href="https://shottool.booth.pm/" target="_blank" rel="noopener">「質感テクスチャ壁紙セット（PC・タブレット用 13枚）」<span class="price">¥300</span> を販売中</a>です。日記のアイキャッチに使っている写真から、質感の際立つ13枚をPC・タブレット用壁紙にしたデジタル商品です。新たに、写真をモザイク化して色のタイルにした「モザイクタイル壁紙セット（PC・タブレット用 16枚）」<span class="price">¥300</span> も販売中です。</p>
+        <span class="status live">販売中</span>
+      </div>
+      <div class="row">
+        <h3>SUZURI</h3>
+        <p>ショップ「<a href="https://suzuri.jp/shottool" target="_blank" rel="noopener">しょっつる</a>」を開設しました。「満席」と「鯖の味噌煮」のデザインのTシャツとポーチを販売中です。モザイクタイルシリーズも追加しました：写真をモザイク化して色のタイルにしたデザインで、緑／枝と実／川面の夕景／水面の4種類。スタンダードTシャツ <span class="price">¥3,421</span> とポーチ <span class="price">¥1,936</span> で販売中です。受注生産なので、在庫を抱えずに買えます。</p>
+        <span class="status live">販売中</span>
+      </div>
+      <div class="row">
+        <h3>メルカリ</h3>
+        <p>中古品を販売中です。</p>
+        <span class="status live">販売中</span>
+      </div>
+      <div class="row">
+        <h3>ヤフオク</h3>
+        <p>中古品をオークション形式で販売中です。メルカリと同じ商品が並ぶこともあります。</p>
+        <span class="status live">販売中</span>
+      </div>
+    </div>
+    <p class="note-line">同じ商品を両方に出品している場合があります。売れた時点で、もう一方の出品は取り下げます。</p>
+  </section>
+
+  <section aria-labelledby="voices">
+    <div class="sec-head"><span class="en-sub">VOICES</span><h2 id="voices">AIたちから見た印象</h2></div>
+    <div class="voice">
+      <h3>人柄</h3>
+      <p>「楽しいこと → 誰かの助けになる → お金が戻ってくる」という<b>循環を本気で設計している人</b>。自分のために作ったものを、他人にも使える形にして返そうとします。</p>
+    </div>
+    <div class="voice">
+      <h3>人を手伝う姿勢</h3>
+      <p>大勢に向けてというより、<b>1対1で人を手伝うのが好きなタイプ</b>。頼まれたことを相手に合わせて形にするのが得意で、校正の仕事もその延長にあります。</p>
+    </div>
+    <div class="voice">
+      <h3>編集・文章化</h3>
+      <p>散らかった情報を整理して、<b>「伝わる形」に変える編集・文章化</b>が強み。人の話を聞いて、それを文章に落とす作業を楽しめる人です。</p>
+    </div>
+    <div class="voice">
+      <h3>個人開発</h3>
+      <p>仕様書を書いて<b>複数のAIを使い分ける、非エンジニアの個人開発者</b>。コードを書く側ではなく、設計して任せる側でものを作ります。</p>
+    </div>
+    <div class="voice">
+      <h3>継続力</h3>
+      <p>日記は<b>280本超</b>、Xの投稿は<b>73,000件超</b>、自作ツールは<b>2本を公開</b>。派手さより、続けて積み上げるタイプです。</p>
+    </div>
+    <div class="voice">
+      <h3>イラスト</h3>
+      <p>オリジナルキャラクターの制作は継続中。公開しながら少しずつ描き方を試している最中で、本人いわくまだまだ発展途上。それでも<b>描くことをやめずに続けている</b>のが、この人のペースです。</p>
+    </div>
+    <p class="src-note">※ Claude / ChatGPT / Grok との会話履歴（2026年11月調査）をもとに、AI側の所見としてまとめたものです。</p>
+  </section>
+
+  <footer>
+    <span>© しょっつる / SHOTTOOL</span>
+    <span>X @SHOTTOOL ・ note shottool ・ GitHub syotturu</span>
+  </footer>
+
+</div>
+<script>
+(function(){
+  var root=document.documentElement;
+  var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* fixed glitter grains: positions are generated once from a fixed seed and never move;
+     only the single shared light source (--lx/--ly/--holo-a) moves. */
+  var seed=20261120;
+  function rnd(){seed=(seed*1103515245+12345)%2147483648;return seed/2147483648;}
+  var grainSets=[];
+  for(var s=0;s<6;s++){
+    var pts=[];
+    var n=s===0?46:16;
+    for(var i=0;i<n;i++){pts.push({x:(6+rnd()*88).toFixed(1),y:(6+rnd()*88).toFixed(1),r:(s===0?1+rnd()*1.8:0.8+rnd()*1.2).toFixed(1),o:(0.35+rnd()*0.6).toFixed(2)});}
+    grainSets.push(pts);
+  }
+  var seals=document.querySelectorAll(".seal");
+  seals.forEach(function(seal,idx){
+    var box=seal.querySelector(".grains");
+    if(!box)return;
+    grainSets[idx%grainSets.length].forEach(function(p){
+      var d=document.createElement("span");
+      d.className="grain";
+      d.style.left=p.x+"%";d.style.top=p.y+"%";
+      d.style.width=(p.r*2)+"px";d.style.height=(p.r*2)+"px";
+      d.style.opacity=p.o;
+      box.appendChild(d);
+    });
+  });
+  /* one light source for the whole page, driven by the pointer */
+  function setLight(x,y){
+    var w=window.innerWidth||1,h=window.innerHeight||1;
+    root.style.setProperty("--lx",(x/w*100).toFixed(1)+"%");
+    root.style.setProperty("--ly",(y/h*100).toFixed(1)+"%");
+    root.style.setProperty("--holo-a",(((x/w)-0.5)*140).toFixed(1)+"deg");
+  }
+  if(!reduce){
+    window.addEventListener("pointermove",function(e){setLight(e.clientX,e.clientY);},{passive:true});
+  }
+  /* hero seal: drag to tilt/flex, springs back on release */
+  var hero=document.getElementById("sealHero");
+  if(hero&&!reduce){
+    var dragging=false,sx=0,sy=0;
+    hero.addEventListener("pointerdown",function(e){
+      dragging=true;sx=e.clientX;sy=e.clientY;
+      hero.classList.add("dragging");
+      hero.setPointerCapture(e.pointerId);
+    });
+    hero.addEventListener("pointermove",function(e){
+      if(!dragging)return;
+      var dx=e.clientX-sx,dy=e.clientY-sy;
+      var ry=Math.max(-38,Math.min(38,dx*0.45));
+      var rx=Math.max(-38,Math.min(38,-dy*0.45));
+      var bend=Math.max(-8,Math.min(8,dx*0.03));
+      hero.style.transform="rotateX("+rx+"deg) rotateY("+ry+"deg) skewX("+bend+"deg)";
+      setLight(e.clientX,e.clientY);
+    });
+    function release(){
+      if(!dragging)return;
+      dragging=false;hero.classList.remove("dragging");
+      hero.style.transform="";
+    }
+    hero.addEventListener("pointerup",release);
+    hero.addEventListener("pointercancel",release);
+  }
+})();
+</script>
+</body>
+</html>
