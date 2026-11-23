@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>あそびば — スワイプで次々遊べる（試作）</title>
+<!--
+  試作プロトタイプ（未公開）。money-ideas 2026-11-23 朝の回テスト成果物。
+  元ネタ：ポコゲー Developer Program（2026-11-18開始、1プレイ0.1円）
+  シャッフル：プラットフォーム運営→個人、広告収益の分配→自社商品への送客、
+  アプリ内フィード→自分のサイト内の1ページ、に置き換えたもの。
+  ルール：導線枠は1枠のみ。遊んだあとの「次の一歩」に直結するものだけ置く。
+  TODO: ピッタリ切断チャレンジ／居合両断の個別ページURLを確認して差し替える
+        （現状はサイトトップへのリンク。サケ切りは /salmon.html を確認済み）。
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #0e1526; color: #eef2f8; }
+  header { padding: 18px 16px 10px; }
+  header h1 { font-size: 20px; }
+  header p { font-size: 13px; color: #9fb0c8; margin-top: 4px; }
+  .feed { scroll-snap-type: y mandatory; overflow-y: auto; height: calc(100dvh - 76px); }
+  .card {
+    scroll-snap-align: start;
+    min-height: calc(100dvh - 76px);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 24px 20px; border-top: 1px solid #22304a;
+  }
+  .card .no { font-size: 12px; color: #7fa3d1; letter-spacing: .1em; }
+  .card h2 { font-size: 26px; margin: 8px 0; }
+  .card p.desc { font-size: 15px; line-height: 1.7; color: #c6d2e4; }
+  .card a.play {
+    display: block; text-align: center; margin: 20px 0 14px; padding: 14px;
+    background: #2f6fd0; color: #fff; text-decoration: none; border-radius: 10px;
+    font-size: 17px; font-weight: bold;
+  }
+  .next {
+    border: 1px solid #33507e; border-radius: 10px; padding: 12px 14px;
+    font-size: 13px; line-height: 1.6; color: #b9c8de; background: #131e33;
+  }
+  .next b { color: #fff; }
+  .next .tag { font-size: 11px; color: #7fa3d1; }
+  .hint { text-align: center; font-size: 12px; color: #7d8ea8; padding: 10px 0 22px; }
+  footer { padding: 16px; font-size: 12px; color: #7d8ea8; line-height: 1.7; }
+</style>
+</head>
+<body>
+<header>
+  <h1>あそびば</h1>
+  <p>スワイプで次々遊べる、しょっつるの小さなゲーム置き場（試作）</p>
+</header>
+
+<main class="feed">
+  <section class="card">
+    <div class="no">GAME 01</div>
+    <h2>サケ切りドットおもちゃ</h2>
+    <p class="desc">ドットのサケを切って、断面の解剖図をのぞくおもちゃ。切るたびに身と骨と内臓が出てきます。</p>
+    <a class="play" href="https://syotturu.github.io/salmon.html">▶ 遊ぶ</a>
+    <div class="next">
+      <span class="tag">遊んだあとの次の一歩</span><br>
+      <b>キラキラ編み目ブロック壁紙セット ¥300</b> — 写真をモザイクに編んだPC・タブレット用壁紙16枚（BOOTH）
+    </div>
+    <div class="hint">↓ スワイプで次のゲームへ</div>
+  </section>
+
+  <section class="card">
+    <div class="no">GAME 02</div>
+    <h2>ピッタリ切断チャレンジ</h2>
+    <p class="desc">ものを切って、断面がお題の「穴」にピッタリ合うか挑戦するゲーム。マグカップ、三角錐、シャベル。S〜Dランクつき。</p>
+    <a class="play" href="https://syotturu.github.io/">▶ 遊ぶ（サイトの「遊べるもの」から）</a>
+    <div class="next">
+      <span class="tag">遊んだあとの次の一歩</span><br>
+      <b>同人誌の入稿サポート ¥1,000</b> — データチェック＋修正リスト＋再チェック1回（ココナラ）
+    </div>
+    <div class="hint">↓ スワイプで次のゲームへ</div>
+  </section>
+
+  <section class="card">
+    <div class="no">GAME 03</div>
+    <h2>居合両断</h2>
+    <p class="desc">切る快感だけを詰めたスピンオフゲーム。真ん中は固定、ものは四方から。スコアでレベルアップ。</p>
+    <a class="play" href="https://syotturu.github.io/">▶ 遊ぶ（サイトの「遊べるもの」から）</a>
+    <div class="next">
+      <span class="tag">遊んだあとの次の一歩</span><br>
+      <b>noteメンバーシップ ¥300/月</b> — 日記とメンバー向け記事が読める月額プラン
+    </div>
+    <div class="hint">いちばん下です。また遊びにきてください。</div>
+  </section>
+</main>
+
+<footer>
+  試作メモ：このページ自体に収益は発生しません。収益は「遊んだ人の次の一歩」（BOOTH・入稿サポート・note）への送客で生む設計です。
+  導線枠は1カード1枠のみ。ポコゲー PDP への出品（1プレイ0.1円）は別枠の選択肢で、申し込み・審査は semb の承認が必要です（先着50名・2026-12-31まで・予算100万円）。
+</footer>
+</body>
+</html>
