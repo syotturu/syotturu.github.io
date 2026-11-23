@@ -122,7 +122,7 @@ const CANNON_SPR=buildCannon();
 
 // ---------- ゲーム状態 ----------
 const ROAD_L=52, ROAD_R=188, ROAD_CX=(ROAD_L+ROAD_R)/2;
-const CAP=350;
+let CAP=0; const AMMO=90; let ammoLeft=0;
 let state='title'; // title | play | win | lose
 let blues=[], reds=[], pops=[];
 let cannonX=ROAD_CX, camD=0, spawnT=0, fightT=0, bossT=0, swipeT=0, time=0;
@@ -130,16 +130,27 @@ let boss=null, msg='', msgT=0;
 
 const GATES=[
   {d:300, ops:[{t:'m',v:2},{t:'m',v:3}]},
-  {d:640, ops:[{t:'a',v:30},{t:'m',v:2}]},
-  {d:1180,ops:[{t:'m',v:2},{t:'m',v:2}]},
-  {d:1720,ops:[{t:'m',v:3},{t:'a',v:50}]},
+  {d:1000,ops:[{t:'a',v:40},{t:'m',v:2}]},
+  {d:1650,ops:[{t:'m',v:2},{t:'m',v:2}]},
+  {d:2200,ops:[{t:'m',v:3},{t:'a',v:80}]},
 ];
-const BLOCKS=[ {d:920,n:60}, {d:1480,n:150}, {d:1980,n:250} ];
-const BOSS_D=2380, BOSS_HP=800;
+const BLOCKS=[ {d:700,n:80}, {d:1350,n:220}, {d:1950,n:420} ];
+const BOSS_D=2500, BOSS_HP=1500;
+// 上限は固定値ではなく、このステージで理論上生み出せる最大数（最適なゲート選択時）
+function computeCap(){
+  let vals=[AMMO];
+  for(const g of GATES){
+    const next=[];
+    for(const v of vals) for(const op of g.ops) next.push(op.t==='m'? v*op.v : v+op.v);
+    vals=next;
+  }
+  return Math.max.apply(null,vals);
+}
 
 function reset(){
   blues=[];reds=[];pops=[];boss=null;
   for(const g of GATES) g.used=false;
+  CAP=computeCap(); ammoLeft=AMMO;
   cannonX=ROAD_CX;camD=0;spawnT=0;fightT=0;bossT=0;swipeT=0;
   for(const b of BLOCKS){
     const cols=10, rows=Math.ceil(b.n/cols);
@@ -194,25 +205,32 @@ function update(dt){
   if(state!=='play')return;
   // 大砲から小人を発射
   spawnT-=dt;
-  if(spawnT<=0 && blues.length<CAP){
-    spawnT=0.10;
+  if(spawnT<=0 && ammoLeft>0 && blues.length<CAP){
+    spawnT=0.15;
+    ammoLeft--;
     addBlue(cannonX+(Math.random()*8-4), camD+8);
   }
+  // 赤を d のバケツに入れて接敵判定を軽くする
+  const rb=new Map();
+  for(const r of reds){ if(r.dead)continue; const k=(r.d/12)|0; if(!rb.has(k))rb.set(k,[]); rb.get(k).push(r); }
   // 青の前進と分離
-  let engaged=false;
+  let engaged=false, bossContact=0;
   const fD=frontD();
   for(const b of blues){
     b.ph+=dt*10;
     // 敵に近ければ止まる
     let blocked=false;
-    for(const r of reds){
-      if(r.dead)continue;
-      const dd=r.d-b.d;
-      if(dd>0&&dd<13&&Math.abs(r.x-b.x)<8){blocked=true;engaged=true;break;}
+    const k0=(b.d/12)|0, k1=((b.d+14)/12)|0;
+    for(let k=k0;k<=k1&&!blocked;k++){
+      const arr=rb.get(k); if(!arr)continue;
+      for(const r of arr){
+        const dd=r.d-b.d;
+        if(dd>0&&dd<13&&Math.abs(r.x-b.x)<8){blocked=true;engaged=true;break;}
+      }
     }
     if(boss && boss.hp>0){
       const dd=boss.d-b.d;
-      if(dd>0&&dd<26&&Math.abs(boss.x-b.x)<26){blocked=true;engaged=true;}
+      if(dd>0&&dd<26&&Math.abs(boss.x-b.x)<26){blocked=true;engaged=true;bossContact++;}
     }
     if(!blocked) b.d+=46*dt;
     // ゲート判定（行を越えた瞬間、その x のゲートを適用）
@@ -226,15 +244,17 @@ function update(dt){
       }
     }
   }
-  // 簡易分離（重なり解消）
+  // 簡易分離（dでソートして近傍だけ見る）
+  blues.sort((p,q)=>p.d-q.d);
   for(let i=0;i<blues.length;i++){
     const a=blues[i];
     for(let j=i+1;j<blues.length;j++){
       const c=blues[j];
-      const dx=c.x-a.x, dd=c.d-a.d;
-      if(Math.abs(dx)<5&&Math.abs(dd)<5){
-        const push=(5-Math.abs(dx))*0.5*(dx>=0?1:-1);
-        a.x-=push*0.5; c.x+=push*0.5;
+      if(c.d-a.d>=5)break;
+      const dx=c.x-a.x;
+      if(Math.abs(dx)<5){
+        const push=(5-Math.abs(dx))*0.25*(dx>=0?1:-1);
+        a.x-=push; c.x+=push;
         a.x=clamp(a.x,ROAD_L+4,ROAD_R-4); c.x=clamp(c.x,ROAD_L+4,ROAD_R-4);
       }
     }
@@ -251,7 +271,7 @@ function update(dt){
       for(let i=0;i<reds.length;i++){ if(reds[i].dead)continue; if(reds[i].d<rd){rd=reds[i].d;ri=i;} }
       const bossFight = boss && boss.hp>0 && (boss.d-bd)<30;
       if(bossFight){
-        boss.hp-=5;
+        boss.hp-=Math.max(1,Math.round(bossContact/20));
         if(bi>=0&&Math.random()<0.4){ pop(blues[bi].x,blues[bi].d,'#7db4ff'); blues.splice(bi,1); }
         if(boss.hp<=0){ state='win'; }
       } else if(bi>=0&&ri>=0){
@@ -271,7 +291,7 @@ function update(dt){
       }
     }
   }
-  if(blues.length===0 && state==='play') state='lose';
+  if(blues.length===0 && ammoLeft<=0 && state==='play') state='lose';
   // カメラは前線を追う
   const target=clamp(fD-120,0,BOSS_D);
   camD += (target-camD)*Math.min(1,dt*3);
@@ -368,6 +388,8 @@ function draw(){
   // HUD: 自軍カウント
   ctx.fillStyle='#20242e'; ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
   ctx.fillText(blues.length, ROAD_CX, 18);
+  ctx.font='8px sans-serif'; ctx.fillStyle='#444';
+  ctx.fillText('弾 '+ammoLeft+' / 上限 '+CAP, ROAD_CX, 30);
   ctx.font='8px sans-serif'; ctx.fillStyle='#444';
   ctx.fillText('ドラッグで いどう', ROAD_CX, H-6);
   // 進捗
