@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ふえふえモブ（試作）</title>
+<style>
+  html,body{margin:0;padding:0;background:#14161c;height:100%;overflow:hidden;touch-action:none;
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;}
+  #cv{background:#c8a06a;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv" width="240" height="400"></canvas></div>
+<script>
+"use strict";
+// ===== ふえふえモブ（試作）=====
+// ドットスプライトは「解剖積層」の作り方で生成する:
+//  ボクセルグリッド → z層ごとのスライスを1pxずつずらして積む。
+//  法線は生成時に占有状態から推定して焼き込み、太陽は固定。
+//  描画は低解像度アートバッファ(240x400)に描いて pixelated で拡大する。
+const W=240,H=400;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+function fit(){const s=Math.min(innerWidth/W,innerHeight/H);cv.style.width=(W*s|0)+'px';cv.style.height=(H*s|0)+'px';}
+addEventListener('resize',fit);fit();
+
+// ---------- 色 ----------
+function shade(hex,f){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  r=Math.min(255,Math.round(r*f));g=Math.min(255,Math.round(g*f));b=Math.min(255,Math.round(b*f));
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+
+// ---------- ボクセル → スプライトのベイク ----------
+// vox: Map key "x,y,z" -> color hex. 返り値: canvas
+// カメラは「手前・上」から見る前提: スライスを z の分だけ上にずらして積む。
+// 陰影: 上が空いていれば上面(1.0)、手前(y+)が空いていれば正面(0.78)、側面(0.6)。
+function bakeSprite(vox,sx,sy,sz){
+  const c=document.createElement('canvas');
+  c.width=sx; c.height=sy+sz;
+  const g=c.getContext('2d');
+  const has=(x,y,z)=>vox.has(x+','+y+','+z);
+  for(let z=0;z<sz;z++){
+    for(let y=0;y<sy;y++){
+      for(let x=0;x<sx;x++){
+        const col=vox.get(x+','+y+','+z);
+        if(!col)continue;
+        let f=0.6;
+        if(!has(x,y,z+1))f=1.0;          // 上面
+        else if(!has(x,y+1,z))f=0.78;    // 正面
+        else if(!has(x-1,y,z))f=0.68;    // 左面（太陽は左上固定）
+        g.fillStyle=shade(col,f);
+        g.fillRect(x,(sy-1-y)+(sz-1-z),1,1);
+      }
+    }
+  }
+  return c;
+}
+function box(vox,x0,y0,z0,x1,y1,z1,col){
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++)
+    vox.set(x+','+y+','+z,col);
+}
+
+// 小人モデル (8x8x14)。walk=0/1 で脚の前後を変える。
+function buildMan(pal,walk){
+  const v=new Map();
+  const legY = walk? 4:3, legY2 = walk? 3:4;
+  box(v,2,legY,0, 3,legY,3, pal.pants);   // 脚
+  box(v,4,legY2,0, 5,legY2,3, pal.pants);
+  box(v,1,2,4, 6,5,8, pal.shirt);        // 胴
+  box(v,0,3,4, 0,4,7, pal.shirt);        // 腕
+  box(v,7,3,4, 7,4,7, pal.shirt);
+  box(v,0,3,3, 0,4,3, pal.skin);
+  box(v,7,3,3, 7,4,3, pal.skin);
+  box(v,2,2,9, 5,5,12, pal.skin);        // 頭
+  box(v,2,2,12, 5,5,13, pal.hair);       // 髪
+  return bakeSprite(v,8,8,14);
+}
+const PAL_BLUE={shirt:'#2f6df6',pants:'#274b9f',skin:'#f2b183',hair:'#3a2a1a'};
+const PAL_RED ={shirt:'#e83a30',pants:'#8f2f28',skin:'#f2b183',hair:'#202020'};
+const MAN_B=[buildMan(PAL_BLUE,0),buildMan(PAL_BLUE,1)];
+const MAN_R=[buildMan(PAL_RED,0),buildMan(PAL_RED,1)];
+
+// ボス: 骸骨っぽい大型モデル (20x16x34)
+function buildBoss(){
+  const v=new Map(),bone='#e8e4da',dark='#26221c';
+  box(v,4,6,0, 6,9,10, bone);            // 脚
+  box(v,13,6,0, 15,9,10, bone);
+  box(v,4,5,11, 15,10,13, bone);         // 骨盤
+  for(let z=14;z<=24;z+=2) box(v,4,4,z, 15,11,z, bone); // 肋（すきまあり）
+  box(v,4,4,14, 4,11,24, bone); box(v,15,4,14, 15,11,24, bone);
+  box(v,0,6,12, 2,8,22, bone);           // 腕
+  box(v,17,6,12, 19,8,22, bone);
+  box(v,0,6,8, 2,8,11, bone); box(v,17,6,8, 19,8,11, bone); // 手
+  box(v,4,3,25, 15,12,33, bone);         // 頭蓋
+  // 目と鼻の穴（空洞）
+  for(let z=28;z<=30;z++){ box(v,6,3,z, 8,3,z, dark); box(v,11,3,z, 13,3,z, dark); }
+  // 歯
+  for(let x=6;x<=13;x+=2) box(v,x,3,25, x,3,26, dark);
+  const spr=bakeSprite(v,20,16,34);
+  // 穴は色ではなく本当に空ける: dark で塗った部分を透明化する代わりに
+  // 背景に近い暗色のままにする（低解像度では穴として読める）
+  return spr;
+}
+const BOSS_SPR=buildBoss();
+
+// 大砲 (12x10x10)
+function buildCannon(){
+  const v=new Map();
+  box(v,1,2,0, 10,7,2, '#3c4658');       // 台
+  box(v,0,1,0, 1,8,3, '#22262e');        // 車輪
+  box(v,10,1,0, 11,8,3, '#22262e');
+  box(v,3,3,3, 8,6,6, '#4a90d9');        // 本体
+  box(v,5,4,7, 6,5,9, '#3570b8');        // 砲身
+  return bakeSprite(v,12,10,10);
+}
+const CANNON_SPR=buildCannon();
+
+// ---------- ゲーム状態 ----------
+const ROAD_L=52, ROAD_R=188, ROAD_CX=(ROAD_L+ROAD_R)/2;
+const CAP=350;
+let state='title'; // title | play | win | lose
+let blues=[], reds=[], pops=[];
+let cannonX=ROAD_CX, camD=0, spawnT=0, fightT=0, bossT=0, swipeT=0, time=0;
+let boss=null, msg='', msgT=0;
+
+const GATES=[
+  {d:300, ops:[{t:'m',v:2},{t:'m',v:3}]},
+  {d:640, ops:[{t:'a',v:30},{t:'m',v:2}]},
+  {d:1180,ops:[{t:'m',v:2},{t:'m',v:2}]},
+  {d:1720,ops:[{t:'m',v:3},{t:'a',v:50}]},
+];
+const BLOCKS=[ {d:920,n:60}, {d:1480,n:150}, {d:1980,n:250} ];
+const BOSS_D=2380, BOSS_HP=800;
+
+function reset(){
+  blues=[];reds=[];pops=[];boss=null;
+  for(const g of GATES) g.used=false;
+  cannonX=ROAD_CX;camD=0;spawnT=0;fightT=0;bossT=0;swipeT=0;
+  for(const b of BLOCKS){
+    const cols=10, rows=Math.ceil(b.n/cols);
+    for(let i=0;i<b.n;i++){
+      const cx=i%cols, cy=(i/cols)|0;
+      reds.push({x:ROAD_L+14+cx*12+(cy%2)*5, d:b.d+cy*11, hp:1, ph:Math.random()*6.28, dead:false});
+    }
+  }
+  boss={x:ROAD_CX, d:BOSS_D, hp:BOSS_HP, max:BOSS_HP, ph:0};
+  state='play';
+}
+function addBlue(x,d){
+  if(blues.length>=CAP)return;
+  blues.push({x:x,d:d,ph:Math.random()*6.28,gateRow:-1});
+}
+function pop(x,d,col){ pops.push({x:x,d:d,t:0,col:col}); }
+
+// ---------- 入力 ----------
+let dragging=false;
+function ptrX(e){
+  const r=cv.getBoundingClientRect();
+  const cx=(e.touches?e.touches[0].clientX:e.clientX);
+  return (cx-r.left)/r.width*W;
+}
+function onDown(e){
+  if(state!=='play'){ reset(); return; }
+  dragging=true; cannonX=clamp(ptrX(e),ROAD_L+10,ROAD_R-10);
+  e.preventDefault();
+}
+function onMove(e){ if(dragging) cannonX=clamp(ptrX(e),ROAD_L+10,ROAD_R-10); }
+function onUp(){ dragging=false; }
+cv.addEventListener('touchstart',onDown,{passive:false});
+cv.addEventListener('touchmove',e=>{onMove(e);e.preventDefault();},{passive:false});
+cv.addEventListener('touchend',onUp);
+cv.addEventListener('mousedown',onDown);
+cv.addEventListener('mousemove',onMove);
+cv.addEventListener('mouseup',onUp);
+addEventListener('keydown',e=>{
+  if(state!=='play'){ reset(); return; }
+  if(e.key==='ArrowLeft')cannonX=clamp(cannonX-14,ROAD_L+10,ROAD_R-10);
+  if(e.key==='ArrowRight')cannonX=clamp(cannonX+14,ROAD_L+10,ROAD_R-10);
+});
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+
+// ---------- 更新 ----------
+function frontD(){
+  let f=0; for(const b of blues) if(b.d>f)f=b.d;
+  return f;
+}
+function update(dt){
+  time+=dt;
+  if(state!=='play')return;
+  // 大砲から小人を発射
+  spawnT-=dt;
+  if(spawnT<=0 && blues.length<CAP){
+    spawnT=0.10;
+    addBlue(cannonX+(Math.random()*8-4), camD+8);
+  }
+  // 青の前進と分離
+  let engaged=false;
+  const fD=frontD();
+  for(const b of blues){
+    b.ph+=dt*10;
+    // 敵に近ければ止まる
+    let blocked=false;
+    for(const r of reds){
+      if(r.dead)continue;
+      const dd=r.d-b.d;
+      if(dd>0&&dd<13&&Math.abs(r.x-b.x)<8){blocked=true;engaged=true;break;}
+    }
+    if(boss && boss.hp>0){
+      const dd=boss.d-b.d;
+      if(dd>0&&dd<26&&Math.abs(boss.x-b.x)<26){blocked=true;engaged=true;}
+    }
+    if(!blocked) b.d+=46*dt;
+    // ゲート判定（行を越えた瞬間、その x のゲートを適用）
+    for(let gi=0;gi<GATES.length;gi++){
+      const g=GATES[gi];
+      if(b.gateRow<gi && b.d>=g.d){
+        b.gateRow=gi;
+        const op = b.x<ROAD_CX ? g.ops[0] : g.ops[1];
+        if(op.t==='m'){ for(let k=1;k<op.v;k++) addBlue(b.x+(Math.random()*6-3), b.d-2); }
+        else if(!g.used){ g.used=true; for(let k=0;k<op.v;k++) addBlue(ROAD_CX+(Math.random()*70-35), g.d-6); }
+      }
+    }
+  }
+  // 簡易分離（重なり解消）
+  for(let i=0;i<blues.length;i++){
+    const a=blues[i];
+    for(let j=i+1;j<blues.length;j++){
+      const c=blues[j];
+      const dx=c.x-a.x, dd=c.d-a.d;
+      if(Math.abs(dx)<5&&Math.abs(dd)<5){
+        const push=(5-Math.abs(dx))*0.5*(dx>=0?1:-1);
+        a.x-=push*0.5; c.x+=push*0.5;
+        a.x=clamp(a.x,ROAD_L+4,ROAD_R-4); c.x=clamp(c.x,ROAD_L+4,ROAD_R-4);
+      }
+    }
+  }
+  // 戦闘: 接敵中は一定間隔で相討ち
+  if(engaged){
+    fightT-=dt;
+    if(fightT<=0){
+      fightT=0.07;
+      // 最前線の青と赤を1体ずつ消す
+      let bi=-1,bd=-1;
+      for(let i=0;i<blues.length;i++) if(blues[i].d>bd){bd=blues[i].d;bi=i;}
+      let ri=-1,rd=1e9;
+      for(let i=0;i<reds.length;i++){ if(reds[i].dead)continue; if(reds[i].d<rd){rd=reds[i].d;ri=i;} }
+      const bossFight = boss && boss.hp>0 && (boss.d-bd)<30;
+      if(bossFight){
+        boss.hp-=5;
+        if(bi>=0&&Math.random()<0.4){ pop(blues[bi].x,blues[bi].d,'#7db4ff'); blues.splice(bi,1); }
+        if(boss.hp<=0){ state='win'; }
+      } else if(bi>=0&&ri>=0){
+        pop(blues[bi].x,blues[bi].d,'#7db4ff'); blues.splice(bi,1);
+        pop(reds[ri].x,reds[ri].d,'#ff9a8a'); reds[ri].dead=true;
+      }
+    }
+    // ボスの薙ぎ払い
+    if(boss&&boss.hp>0&&(boss.d-fD)<34){
+      swipeT-=dt;
+      if(swipeT<=0){
+        swipeT=2.4;
+        let killed=0;
+        for(let i=blues.length-1;i>=0&&killed<8;i--){
+          if(boss.d-blues[i].d<30){ pop(blues[i].x,blues[i].d,'#ffffff'); blues.splice(i,1); killed++; }
+        }
+      }
+    }
+  }
+  if(blues.length===0 && state==='play') state='lose';
+  // カメラは前線を追う
+  const target=clamp(fD-120,0,BOSS_D);
+  camD += (target-camD)*Math.min(1,dt*3);
+  // ポップ
+  for(let i=pops.length-1;i>=0;i--){ pops[i].t+=dt*2.2; if(pops[i].t>=1)pops.splice(i,1); }
+}
+
+// ---------- 描画 ----------
+function yOf(d){ return H-46-(d-camD); } // world d -> screen y
+function draw(){
+  // 背景（砂漠と道）
+  ctx.fillStyle='#c8a06a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#b8905a';
+  for(let i=0;i<14;i++){
+    const sx=(i*67)%W, sy=((i*97 - (camD*1)%97)+H)%H;
+    ctx.fillRect(sx,sy,3,2);
+  }
+  ctx.fillStyle='#8d8d94'; ctx.fillRect(ROAD_L-6,0,ROAD_R-ROAD_L+12,H);
+  ctx.fillStyle='#a5a5ab'; ctx.fillRect(ROAD_L,0,ROAD_R-ROAD_L,H);
+  ctx.fillStyle='#e8e8e8';
+  const off=(camD%24);
+  for(let y=-24+off;y<H;y+=24) ctx.fillRect(ROAD_CX-1,y,2,12);
+  ctx.fillStyle='#5a5a60'; ctx.fillRect(ROAD_L-6,0,3,H); ctx.fillRect(ROAD_R+3,0,3,H);
+
+  if(state==='title'){
+    ctx.fillStyle='#20242e'; ctx.font='bold 26px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('ふえふえモブ',W/2,150);
+    ctx.font='12px sans-serif';
+    ctx.fillText('ドラッグで大砲を動かす',W/2,186);
+    ctx.fillText('ゲートで増やして、ボスを倒す',W/2,206);
+    ctx.font='bold 14px sans-serif';
+    ctx.fillText('タップでスタート',W/2,250);
+    return;
+  }
+
+  // ゲート
+  for(const g of GATES){
+    const y=yOf(g.d); if(y<-30||y>H+30)continue;
+    for(let s=0;s<2;s++){
+      const gx=s===0?ROAD_L:ROAD_CX, gw=ROAD_CX-ROAD_L;
+      const op=g.ops[s];
+      ctx.fillStyle='rgba(150,60,220,0.75)';
+      ctx.fillRect(gx,y-12,gw,12);
+      ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(op.t==='m'?('×'+op.v):('+'+op.v), gx+gw/2, y-2);
+    }
+  }
+  // 敵ブロックの残数
+  ctx.textAlign='center';
+  for(const b of BLOCKS){
+    let alive=0, topD=0;
+    for(const r of reds){ if(!r.dead&&Math.abs(r.d-b.d)<130){alive++; if(r.d>topD)topD=r.d;} }
+    if(alive>0){
+      const y=yOf(b.d+((Math.ceil(b.n/10))*11))-16;
+      if(y>-20&&y<H+20){
+        ctx.fillStyle='#c22'; ctx.fillRect(ROAD_CX-16,y-9,32,11);
+        ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif';
+        ctx.fillText(alive,ROAD_CX,y);
+      }
+    }
+  }
+  // 描画用に y でソートして集める（奥→手前）
+  const drawList=[];
+  for(const r of reds){ if(r.dead)continue; const y=yOf(r.d); if(y<-24||y>H+10)continue;
+    drawList.push({y:y,x:r.x,spr:MAN_R[((time*8+r.ph)|0)%2],w:8,h:22}); }
+  for(const b of blues){ const y=yOf(b.d); if(y<-24||y>H+10)continue;
+    drawList.push({y:y,x:b.x,spr:MAN_B[((time*8+b.ph)|0)%2],w:8,h:22}); }
+  if(boss&&boss.hp>0){ const y=yOf(boss.d);
+    drawList.push({y:y,x:boss.x,spr:BOSS_SPR,w:20,h:50,boss:true}); }
+  drawList.push({y:yOf(camD+8)+22,x:cannonX,spr:CANNON_SPR,w:12,h:20,cannon:true});
+  drawList.sort((a,b)=>a.y-b.y);
+  for(const e of drawList){
+    // 地面の影
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.fillRect(e.x-e.w/2+1, e.y-2, e.w-2, 3);
+    ctx.drawImage(e.spr, Math.round(e.x-e.w/2), Math.round(e.y-e.h+3));
+  }
+  // ボスHP
+  if(boss&&boss.hp>0){
+    const y=yOf(boss.d)-64;
+    if(y>-30){
+      ctx.fillStyle='#20242e'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(boss.hp, boss.x, y);
+      ctx.fillStyle='#400'; ctx.fillRect(boss.x-26,y+3,52,4);
+      ctx.fillStyle='#e33'; ctx.fillRect(boss.x-26,y+3,52*Math.max(0,boss.hp/boss.max),4);
+    }
+  }
+  // ポップ
+  for(const p of pops){
+    const y=yOf(p.d)-14-p.t*10;
+    ctx.globalAlpha=1-p.t; ctx.fillStyle=p.col;
+    ctx.fillRect(p.x-2,y,4,4); ctx.globalAlpha=1;
+  }
+  // HUD: 自軍カウント
+  ctx.fillStyle='#20242e'; ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(blues.length, ROAD_CX, 18);
+  ctx.font='8px sans-serif'; ctx.fillStyle='#444';
+  ctx.fillText('ドラッグで いどう', ROAD_CX, H-6);
+  // 進捗
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(W-8,30,3,H-70);
+  ctx.fillStyle='#2f6df6'; ctx.fillRect(W-8,30+(H-70)*(1-frontD()/BOSS_D),3,(H-70)*(frontD()/BOSS_D));
+
+  if(state==='win'||state==='lose'){
+    ctx.fillStyle='rgba(20,22,28,0.72)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff'; ctx.textAlign='center';
+    ctx.font='bold 24px sans-serif';
+    ctx.fillText(state==='win'?'WIN!':'全滅…', W/2, 170);
+    ctx.font='12px sans-serif';
+    ctx.fillText(state==='win'?('残り '+blues.length+' 体でボスを倒した'):('ボスまで あと '+Math.max(0,BOSS_D-frontD())), W/2, 198);
+    ctx.font='bold 13px sans-serif';
+    ctx.fillText('タップでもう一度', W/2, 236);
+  }
+}
+
+// ---------- メインループ ----------
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
