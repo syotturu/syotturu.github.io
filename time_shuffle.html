@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>◯分シャッフル — 時間を決めると、その時間で終わる分だけ出る</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+    background: #faf6ef; color: #33302a;
+    max-width: 640px; margin: 0 auto; padding: 20px 16px 48px;
+    line-height: 1.7; -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 24px; margin: 8px 0 4px; letter-spacing: .02em; }
+  .lead { font-size: 14px; color: #6b6455; margin: 0 0 20px; }
+  h2 { font-size: 15px; margin: 24px 0 10px; color: #6b6455; font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: inherit; font-size: 17px; padding: 10px 18px;
+    border-radius: 999px; border: 1px solid #c9bfa9; background: #fff;
+    color: #33302a; cursor: pointer;
+  }
+  button.sel { background: #33302a; color: #faf6ef; border-color: #33302a; }
+  button.mode { font-size: 15px; padding: 8px 16px; }
+  button.go {
+    background: #b4552d; border-color: #b4552d; color: #fff;
+    font-size: 18px; padding: 12px 28px; width: 100%; margin-top: 6px;
+  }
+  button.again { width: 100%; margin-top: 10px; }
+  .meter {
+    background: #fff; border: 1px solid #e3dac7; border-radius: 12px;
+    padding: 12px 16px; margin: 14px 0; font-size: 15px;
+  }
+  .meter b { font-size: 19px; }
+  .bar { height: 8px; background: #efe8d8; border-radius: 99px; margin-top: 8px; overflow: hidden; }
+  .bar > div { height: 100%; background: #b4552d; border-radius: 99px; transition: width .25s; }
+  .card {
+    background: #fff; border: 1px solid #e3dac7; border-radius: 12px;
+    padding: 12px 14px; margin: 8px 0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card .ttl { flex: 1; font-size: 15px; line-height: 1.5; }
+  .card .min { font-size: 13px; color: #6b6455; white-space: nowrap; }
+  .chip {
+    font-size: 12px; padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .k-読む { background: #e6efe0; } .k-観る { background: #e2eaf6; }
+  .k-聴く { background: #f6edd4; } .k-遊ぶ { background: #f9e3e0; }
+  .k-やる { background: #eae3f4; }
+  a.open {
+    font-size: 13px; color: #b4552d; text-decoration: none; white-space: nowrap;
+    border: 1px solid #d9a184; border-radius: 999px; padding: 3px 11px;
+  }
+  .pick { cursor: pointer; }
+  .pick.on { border-color: #b4552d; background: #fdf1e8; }
+  .pick.off { opacity: .38; }
+  .pick .mark { font-size: 17px; width: 22px; text-align: center; color: #b4552d; }
+  #done {
+    border: 2px solid #33302a; border-radius: 12px; padding: 18px;
+    text-align: center; margin-top: 16px; background: #fff;
+  }
+  #done h3 { margin: 0 0 4px; font-size: 18px; }
+  #done p { margin: 0; font-size: 13px; color: #6b6455; }
+  .note { font-size: 12px; color: #968d78; margin-top: 28px; }
+  .hint { font-size: 13px; color: #b4552d; min-height: 1.4em; margin: 4px 0 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<h1>◯分シャッフル</h1>
+<p class="lead">時間を先に決めると、その時間で終わる分だけが出てきます。<br>縛られている間は、好きなことをどうぞ。</p>
+<div id="adBoxGen" style="text-align:center;"><!-- admax -->
+<script src="https://adm.shinobi.jp/s/21ac20c675c41c5ce724e8bdbb405d3d"></script>
+<!-- admax --></div>
+
+<h2>1. 時間を決める</h2>
+<div class="row" id="times">
+  <button data-min="3">3分</button>
+  <button data-min="5">5分</button>
+  <button data-min="10">10分</button>
+  <button data-min="15" class="sel">15分</button>
+  <button data-min="30">30分</button>
+</div>
+
+<h2>2. 決め方を選ぶ</h2>
+<div class="row">
+  <button class="mode sel" id="modeShuffle">シャッフルで決める</button>
+  <button class="mode" id="modePick">自分で選ぶ</button>
+</div>
+
+<!-- シャッフル -->
+<section id="viewShuffle">
+  <div class="meter" id="shuffleMeter"></div>
+  <div id="bundle"></div>
+  <button class="again" id="againBtn">もう一回シャッフル</button>
+  <div id="adBoxResult" style="text-align:center;"><!-- admax -->
+<script src="https://adm.shinobi.jp/s/01ac845926981958c44de34ddaaaa606"></script>
+<!-- admax --></div>
+  <div id="done">
+    <h3>ここで終わり</h3>
+    <p>合計が予算を超えることはありません。続きは出しません。</p>
+  </div>
+</section>
+
+<!-- 自分で選ぶ -->
+<section id="viewPick" class="hidden">
+  <div class="meter" id="pickMeter"></div>
+  <p class="hint" id="pickHint"></p>
+  <div id="pickList"></div>
+  <div id="donePick">
+    <div id="done">
+      <h3>これで終わり</h3>
+      <p>選んだ分だけ、どうぞ。</p>
+    </div>
+  </div>
+</section>
+
+<p class="note">所要時間は目安です。読むものは文字数から、観る・聴くものは再生時間から見積もっています。リンク先は外部サイトです。</p>
+
+<script>
+/*PURE-START*/
+const ITEMS = [
+  // 読む
+  {t:"Wikipedia「あやとり」", k:"読む", m:2, u:"https://ja.wikipedia.org/wiki/あやとり"},
+  {t:"Wikipedia「熱帯魚」", k:"読む", m:3, u:"https://ja.wikipedia.org/wiki/熱帯魚"},
+  {t:"エッセイ1本（note・テーマ：生きること）", k:"読む", m:4},
+  {t:"入稿ミニ知識：RGBとCMYKの違い（1枚メモ）", k:"読む", m:3},
+  {t:"Wikipedia「苔」", k:"読む", m:5, u:"https://ja.wikipedia.org/wiki/苔"},
+  {t:"Wikipedia「三毛猫」", k:"読む", m:5, u:"https://ja.wikipedia.org/wiki/三毛猫"},
+  {t:"エッセイ1本（note・テーマ：お金）", k:"読む", m:5},
+  {t:"入稿ミニ知識：トンボと塗り足し（1枚メモ）", k:"読む", m:4},
+  {t:"エッセイ1本（note・テーマ：道具）", k:"読む", m:6},
+  {t:"Wikipedia「金魚すくい」", k:"読む", m:6, u:"https://ja.wikipedia.org/wiki/金魚すくい"},
+  {t:"芥川龍之介「蜘蛛の糸」（青空文庫）", k:"読む", m:6, u:"https://www.aozora.gr.jp/cards/000879/files/92_14545.html"},
+  {t:"Wikipedia「目玉焼き」", k:"読む", m:8, u:"https://ja.wikipedia.org/wiki/目玉焼き"},
+  {t:"Wikipedia「たい焼き」", k:"読む", m:11, u:"https://ja.wikipedia.org/wiki/たい焼き"},
+  {t:"宮沢賢治「注文の多い料理店」（青空文庫）", k:"読む", m:11, u:"https://www.aozora.gr.jp/cards/000081/files/1927_17906.html"},
+  {t:"Wikipedia「カカオ」", k:"読む", m:13, u:"https://ja.wikipedia.org/wiki/カカオ"},
+  {t:"Wikipedia「メダカ」", k:"読む", m:15, u:"https://ja.wikipedia.org/wiki/メダカ"},
+  {t:"Wikipedia「盆栽」", k:"読む", m:18, u:"https://ja.wikipedia.org/wiki/盆栽"},
+  {t:"Wikipedia「相撲」", k:"読む", m:26, u:"https://ja.wikipedia.org/wiki/相撲"},
+  // 観る
+  {t:"TED「新しいことに30日間挑戦しよう」", k:"観る", m:3, u:"https://www.ted.com/talks/matt_cutts_try_something_new_for_30_days"},
+  {t:"TED-Ed「甘いものがやめられない理由は、脳にあった」", k:"観る", m:5, u:"https://www.youtube.com/watch?v=lEXBxijQREo"},
+  {t:"TED「聞いてもらえる話し方」", k:"観る", m:10, u:"https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen"},
+  {t:"TED「先延ばしの心理」", k:"観る", m:14, u:"https://www.ted.com/talks/tim_urban_inside_the_mind_of_a_master_procrastinator"},
+  {t:"TED「ボディランゲージが人を作る」", k:"観る", m:21, u:"https://www.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are"},
+  // 聴く
+  {t:"米津玄師「Lemon」MV", k:"聴く", m:5, u:"https://www.youtube.com/watch?v=SX_ViT4Ra7k"},
+  {t:"YOASOBI「夜に駆ける」MV", k:"聴く", m:5, u:"https://www.youtube.com/watch?v=x8VYWazR5mE"},
+  {t:"NHKラジオニュース（毎時更新）", k:"聴く", m:5, u:"https://www.nhk.or.jp/podcasts/listen_news.html"},
+  {t:"NHKラジオニュース「午前0時のニュース」", k:"聴く", m:10, u:"https://www.nhk.or.jp/podcasts/listen_news.html"},
+  {t:"NHKラジオニュース「正午のニュース」", k:"聴く", m:15, u:"https://www.nhk.or.jp/podcasts/listen_news.html"},
+  {t:"コテンラジオ（歴史）1話", k:"聴く", m:22, u:"https://podcasts.apple.com/jp/podcast/%E6%AD%B4%E5%8F%B2%E3%82%92%E9%9D%A2%E7%99%BD%E3%81%8F%E5%AD%A6%E3%81%B6%E3%82%B3%E3%83%86%E3%83%B3%E3%83%A9%E3%82%B8%E3%82%AA-coten-radio/id1450522865"},
+  // 遊ぶ
+  {t:"Quick, Draw!（お絵かき当てゲーム）", k:"遊ぶ", m:3, u:"https://quickdraw.withgoogle.com/"},
+  {t:"マインスイーパ（初級）", k:"遊ぶ", m:3, u:"https://minesweeper.online/"},
+  {t:"サケ切りドットおもちゃ 1プレイ", k:"遊ぶ", m:3},
+  {t:"ピッタリ切断チャレンジ 1プレイ", k:"遊ぶ", m:4},
+  {t:"2048", k:"遊ぶ", m:5, u:"https://play2048.co/"},
+  {t:"Wordle（1日1問の英単語当て）", k:"遊ぶ", m:5, u:"https://www.nytimes.com/games/wordle/index.html"},
+  {t:"slither.io", k:"遊ぶ", m:5, u:"http://slither.io/"},
+  {t:"数独（かんたん）", k:"遊ぶ", m:10, u:"https://sudoku.com/"},
+  {t:"Little Alchemy 2（10分で何品作れるか）", k:"遊ぶ", m:10, u:"https://littlealchemy2.com/"},
+  // やる
+  {t:"ラジオ体操第一", k:"やる", m:3, u:"https://www.youtube.com/watch?v=_YZZfaMGEOU"},
+  {t:"クックパッド「調理時間3分 しめじと豆のサラダ」", k:"やる", m:3, u:"https://cookpad.com/jp/recipes/19921743-%E8%AA%BF%E7%90%86%E6%99%82%E9%96%933%E5%88%86-%E3%81%97%E3%82%81%E3%81%98%E3%81%A8%E8%B1%86%E3%81%AE%E3%82%B5%E3%83%A9%E3%83%80"},
+  {t:"クックパッド「ハム★ピーマン卵サラダ★レンジ3分」", k:"やる", m:3, u:"https://cookpad.com/jp/recipes/21627783"},
+  {t:"みんなの体操", k:"やる", m:5, u:"https://www.youtube.com/watch?v=V6I36YvueK4"},
+  {t:"寝ながら肩こり対策ストレッチ", k:"やる", m:10, u:"https://www.youtube.com/watch?v=A_6rh6OmKB0"},
+  {t:"クックパッドニュース「鶏胸肉のみぞれ煮」", k:"やる", m:10, u:"https://news.cookpad.com/articles/66488"}
+];
+function shuffled(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function buildBundle(budget) {
+  const pool = shuffled(ITEMS.filter(it => it.m <= budget));
+  const out = []; let total = 0;
+  for (const it of pool) {
+    if (total + it.m <= budget) { out.push(it); total += it.m; }
+  }
+  return { items: out, total };
+}
+/*PURE-END*/
+
+let budget = 15;
+let mode = "shuffle";
+const picked = new Set();
+
+const $ = id => document.getElementById(id);
+
+function cardHTML(it) {
+  const link = it.u ? `<a class="open" href="${it.u}" target="_blank" rel="noopener">ひらく</a>` : "";
+  return `<div class="card"><span class="chip k-${it.k}">${it.k}</span><span class="ttl">${it.t}</span><span class="min">約${it.m}分</span>${link}</div>`;
+}
+function meterHTML(total) {
+  const pct = Math.min(100, Math.round(total / budget * 100));
+  return `合計 <b>約${total}分</b> ／ 予算 ${budget}分（あと約${budget - total}分）<div class="bar"><div style="width:${pct}%"></div></div>`;
+}
+
+function renderShuffle() {
+  const b = buildBundle(budget);
+  $("bundle").innerHTML = b.items.map(cardHTML).join("");
+  $("shuffleMeter").innerHTML = meterHTML(b.total);
+}
+
+function pickTotal() {
+  let s = 0; picked.forEach(i => s += ITEMS[i].m); return s;
+}
+function renderPick() {
+  const total = pickTotal();
+  $("pickMeter").innerHTML = meterHTML(total);
+  const order = ["読む", "観る", "聴く", "遊ぶ", "やる"];
+  let html = "";
+  order.forEach(k => {
+    html += `<h2>${k}</h2>`;
+    ITEMS.forEach((it, i) => {
+      if (it.k !== k) return;
+      const on = picked.has(i);
+      const off = !on && total + it.m > budget;
+      const link = it.u ? `<a class="open" href="${it.u}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ひらく</a>` : "";
+      html += `<div class="card pick ${on ? "on" : ""} ${off ? "off" : ""}" data-i="${i}"><span class="mark">${on ? "●" : "○"}</span><span class="ttl">${it.t}</span><span class="min">約${it.m}分</span>${link}</div>`;
+    });
+  });
+  $("pickList").innerHTML = html;
+  document.querySelectorAll(".pick").forEach(el => {
+    el.onclick = () => {
+      const i = +el.dataset.i;
+      if (picked.has(i)) { picked.delete(i); $("pickHint").textContent = ""; }
+      else if (pickTotal() + ITEMS[i].m <= budget) { picked.add(i); $("pickHint").textContent = ""; }
+      else { $("pickHint").textContent = `あと約${budget - pickTotal()}分しか残っていないので、これは入りません。`; return; }
+      renderPick();
+    };
+  });
+}
+
+function setMode(m) {
+  mode = m;
+  $("modeShuffle").classList.toggle("sel", m === "shuffle");
+  $("modePick").classList.toggle("sel", m === "pick");
+  $("viewShuffle").classList.toggle("hidden", m !== "shuffle");
+  $("viewPick").classList.toggle("hidden", m !== "pick");
+  if (m === "shuffle") renderShuffle(); else renderPick();
+}
+
+document.querySelectorAll("#times button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#times button").forEach(x => x.classList.remove("sel"));
+    b.classList.add("sel");
+    budget = +b.dataset.min;
+    // 予算が縮んだら、はみ出す選択を新しい順に外す
+    const arr = [...picked].reverse();
+    for (const i of arr) { if (pickTotal() > budget) picked.delete(i); else break; }
+    if (mode === "shuffle") renderShuffle(); else renderPick();
+  };
+});
+$("modeShuffle").onclick = () => setMode("shuffle");
+$("modePick").onclick = () => setMode("pick");
+$("againBtn").onclick = renderShuffle;
+
+renderShuffle();
+</script>
+</body>
+</html>
